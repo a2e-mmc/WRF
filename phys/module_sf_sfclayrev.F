@@ -131,11 +131,20 @@ CONTAINS
                                                               P3D, &
                                                               T3D
 
-      REAL,     DIMENSION( ims:ime, jms:jme )                    , &
+!      REAL,     DIMENSION( ims:ime, jms:jme )                    , & !JDM 04_2019 Original
+!                INTENT(IN   )               ::             MAVAIL, &
+!                                                             PBLH, &
+!                                                            XLAND, &
+!                                                              TSK
+      
+      REAL,     DIMENSION( ims:ime, jms:jme )                    , & !JDM 04_2019 NEW
                 INTENT(IN   )               ::             MAVAIL, &
                                                              PBLH, &
-                                                            XLAND, &
-                                                              TSK
+                                                            XLAND
+      
+      REAL,     DIMENSION( ims:ime, jms:jme )                    , & !JDM 04_2019 NEW
+                INTENT(INOUT)               ::                TSK    !TSK now INOUT
+      
       REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                 INTENT(OUT  )               ::                U10, &
                                                               V10, &
@@ -278,12 +287,20 @@ CONTAINS
       REAL,     INTENT(IN )   ::        P1000mb
 
 !
-      REAL,     DIMENSION( ims:ime )                             , &
+!      REAL,     DIMENSION( ims:ime )                             , &  !JDM 04_2019 Original
+!                INTENT(IN   )               ::             MAVAIL, &
+!                                                             PBLH, &
+!                                                            XLAND, &
+!                                                              TSK
+
+      REAL,     DIMENSION( ims:ime )                             , & !JDM 04_2019 NEW
                 INTENT(IN   )               ::             MAVAIL, &
                                                              PBLH, &
-                                                            XLAND, &
-                                                              TSK
-!
+                                                            XLAND
+      
+      REAL,     DIMENSION( ims:ime )                             , & !JDM 04_2019 NEW
+                INTENT(INOUT)               ::                TSK    !TSK now INOUT
+      
       REAL,     DIMENSION( ims:ime )                             , &
                 INTENT(IN   )               ::             PSFCPA
 
@@ -381,6 +398,9 @@ CONTAINS
       REAL    :: zl2,zl10,z0t
       REAL,     DIMENSION( its:ite )        ::         pq,pq2,pq10
 
+      REAL    :: no_mavail  !JDM 04_2019
+
+      no_mavail = 0.0 !JDM 04_2019
 
 !-------------------------------------------------------------------
       KL=kte
@@ -708,54 +728,11 @@ CONTAINS
               Z0T = MAX(Z0T,2.0e-9)
               Z0Q = Z0T
 
-! following paj:
-           zolzz=zol(I)*(za(I)+z0t)/za(I)    ! (z+z0t)/L
-           zol10=zol(I)*(10.+z0t)/za(I)   ! (10+z0t)/L
-           zol2=zol(I)*(2.+z0t)/za(I)     ! (2+z0t)/L
-           zol0=zol(I)*z0t/za(I)          ! z0t/L
-!
-              if (zol(I).gt.0.) then
-              psih(I)=psih_stable(zolzz)-psih_stable(zol0)
-              psih10(I)=psih_stable(zol10)-psih_stable(zol0)
-              psih2(I)=psih_stable(zol2)-psih_stable(zol0)
-              else
-                if (zol(I).eq.0) then
-                psih(I)=0.
-                psih10(I)=0.
-                psih2(I)=0.
-                else
-                psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
-                psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
-                psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
-                endif
-              endif
-              PSIT=ALOG((ZA(I)+z0t)/Z0t)-PSIH(I)
-              PSIT2=ALOG((2.+z0t)/Z0t)-PSIH2(I)
-
-           zolzz=zol(I)*(za(I)+z0q)/za(I)    ! (z+z0q)/L
-           zol10=zol(I)*(10.+z0q)/za(I)   ! (10+z0q)/L
-           zol2=zol(I)*(2.+z0q)/za(I)     ! (2+z0q)/L
-           zol0=zol(I)*z0q/za(I)          ! z0q/L
-!
-              if (zol(I).gt.0.) then
-              psih(I)=psih_stable(zolzz)-psih_stable(zol0)
-              psih10(I)=psih_stable(zol10)-psih_stable(zol0)
-              psih2(I)=psih_stable(zol2)-psih_stable(zol0)
-              else
-                if (zol(I).eq.0) then
-                psih(I)=0.
-                psih10(I)=0.
-                psih2(I)=0.
-                else
-                psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
-                psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
-                psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
-                endif
-              endif
-!
-              PSIQ=ALOG((ZA(I)+z0q)/Z0q)-PSIH(I)
-              PSIQ2=ALOG((2.+z0q)/Z0q)-PSIH2(I)
-              PSIQ10=ALOG((10.+z0q)/Z0q)-PSIH10(I)
+              PSIQ=max(ALOG((ZA(I)+Z0Q)/Z0Q)-PSIH(I), 2.)
+              PSIT=max(ALOG((ZA(I)+Z0T)/Z0T)-PSIH(I), 2.)
+              PSIQ2=max(ALOG((2.+Z0Q)/Z0Q)-PSIH2(I), 2.)
+              PSIT2=max(ALOG((2.+Z0T)/Z0T)-PSIH2(I), 2.)
+              PSIQ10=max(ALOG((10.+Z0Q)/Z0Q)-PSIH10(I), 2.)
         ENDIF
 
         IF ( PRESENT(ISFTCFLX) ) THEN
@@ -876,19 +853,14 @@ CONTAINS
            Cda(I)=(karman/psix)*(karman/psix)
         ENDIF
         IF ( PRESENT(IZ0TLND) ) THEN
-           IF ( IZ0TLND.GE.1 .AND. (XLAND(I)-1.5).LE.0. ) THEN
+           IF ( IZ0TLND.EQ.1 .AND. (XLAND(I)-1.5).LE.0. ) THEN
               ZL=ZNT(I)
 !             CZIL RELATED CHANGES FOR LAND
               VISC=(1.32+0.009*(SCR3(I)-273.15))*1.E-5
               RESTAR=UST(I)*ZL/VISC
-!             Modify CZIL according to Chen & Zhang, 2009 if iz0tlnd = 1
-!             If iz0tlnd = 2, use traditional value
+!             Modify CZIL according to Chen & Zhang, 2009
 
-              IF ( IZ0TLND.EQ.1 ) THEN
-                 CZIL = 10.0 ** ( -0.40 * ( ZL / 0.07 ) )
-              ELSE IF ( IZ0TLND.EQ.2 ) THEN
-                 CZIL = 0.1 
-              END IF
+              CZIL = 10.0 ** ( -0.40 * ( ZL / 0.07 ) )
 !
 ! ... paj: compute phish for z0t over land
 !
@@ -973,8 +945,6 @@ CONTAINS
 !         ZNT(I)=CZO*UST(I)*UST(I)/G+OZO                                   
 ! Since V3.7 (ref: EC Physics document for Cy36r1)
           ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
-! V3.9: Add limit as in isftcflx = 1,2
-          ZNT(I)=MIN(ZNT(I),2.85e-3)
 ! COARE 3.5 (Edson et al. 2013)
 !         CZC = 0.0017*WSPD(I)-0.005
 !         CZC = min(CZC,0.028)
@@ -1002,6 +972,9 @@ CONTAINS
           ZL = 0.01
         ENDIF                                                                    
         FLQC(I)=RHOX(I)*MAVAIL(I)*UST(I)*KARMAN/DENOMQ(I)
+
+        FLQC(I)=RHOX(I)*no_mavail*UST(I)*KARMAN/DENOMQ(I) ! JDM 04_2019
+        
 !       FLQC(I)=RHOX(I)*MAVAIL(I)*UST(I)*KARMAN/(   &
 !               ALOG(KARMAN*UST(I)*ZA(I)/XKA+ZA(I)/ZL)-PSIH(I))
         DTTHX=ABS(THX(I)-THGB(I))                                            
@@ -1043,10 +1016,38 @@ CONTAINS
 !         ENDIF 
         ELSEIF(XLAND(I)-1.5.LT.0.)THEN                                       
           HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
-          HFX(I)=AMAX1(HFX(I),-250.)                                       
+          HFX(I)=AMAX1(HFX(I),-250.)
+          
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!JDM 04_2019 Modify Heat Flux Begin
+
+         HFX(I) = 200.0  !W m^-2 
+         
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!JDM 04_2019 Modify Heat Flux END
+          
         ENDIF                                                                  
   400 CONTINUE                                                                 
 
+      DO 403 I=its,ite !JDM 04_2019 Adjust TSK for specified heat flux Begin
+
+        IF ( FLHC(I) .EQ. 0.0 ) THEN
+   
+           THGB(I) = THX(I)
+
+        ELSE 
+
+           THGB(I) = THX(I) + HFX(I)/FLHC(I)
+
+        ENDIF
+
+        TSK(I) = THGB(I)/((100./PSFC(I))**ROVCP)
+
+!  NOT SURE... JDM     USTM(I) = UST(I)
+
+!      IF ( i .EQ. 5 ) print*,'HFX(I), UST(I) ',HFX(I), UST(I)
+
+  403  CONTINUE   !JDM 04_2019 Adjust TSK for specified heat flux END
+  
+        
   405 CONTINUE                                                                 
          
       DO I=its,ite

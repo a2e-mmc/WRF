@@ -116,6 +116,10 @@ CONTAINS
    REAL    :: xa1, xal1,pii,hm1  !  data for intercomparison setup from dale
 !  space for initial jet in b_wave
 
+   REAL :: delta                   !JDM-SWiFT Depth to apply perturbations
+   INTEGER :: nkp                  !JDM-SWiFT Number of height levels to apply perturbations 
+   REAL, DIMENSION(nl_max) ::sf    !JDM-SWiFT Scale factor for perturbation magnitudes
+
    INTEGER, parameter :: nz_jet=64, ny_jet=80
    REAL, DIMENSION(nz_jet, ny_jet) :: u_jet, rho_jet, th_jet, z_jet
 
@@ -193,7 +197,11 @@ CONTAINS
 !   hm1  = 1000.
 
 
-   stretch_grid = .true.
+!  stretch_grid = .true.
+!  FOR LES, set stretch to false
+!JDM-SWiFT   stretch_grid = .false.
+  stretch_grid = .true. !JDM-SWiFT
+
    delt = 0.
 !   z_scale = .40
    z_scale = 8000./config_flags%ztop
@@ -595,8 +603,13 @@ CONTAINS
          grid%cosa(i,j)     = 1.
          grid%e(i,j)        = 0.
 !  for LES, include Coriolis force
-         grid%f(i,j)        = 1.e-4
-
+         grid%f(i,j)        = 1.e-4 
+!JDM-SWiFT Marshalltown, IA (CWEX), lat = 42.0417
+!JDM-SWiFT        grid%e(i,j)        = 0.000108311
+!JDM-SWiFT        grid%f(i,j)        = 0.000097666
+!JDM-SWiFT SWiFT facility, latitude = 33.61054 N
+       grid%e(i,j)        = 0.00012146 !JDM-SWiFT
+       grid%f(i,j)        = 0.00008073 !JDM-SWiFT 
       END DO
    END DO
 
@@ -640,8 +653,9 @@ CONTAINS
        IF (model_config_rec%eta_levels(1) .EQ. -1) THEN !we do not have eta_levels from namelist
    IF (stretch_grid) THEN ! exponential stretch for eta (nearly constant dz)
      DO k=1, kde
-      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
-                                (1.-exp(-1./z_scale))
+!JDM-SWiFT      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
+!JDM-SWiFT                                (1.-exp(-1./z_scale))
+       grid%znw(k) = model_config_rec%eta_levels(k) !JDM-SWiFT
      ENDDO
    ELSE
      DO k=1, kde
@@ -1366,10 +1380,14 @@ CONTAINS
     DO I = its, min(ide-1,ite)
 !     xrad = config_flags%dx*float(i-nxc)/10000.
       xrad = 0.
-      call random_number (randx)
-      randx = randx - 0.5
-!     DO K = 1, kte-1
-      DO K = 1, 4
+!JDM-SWiFT      call random_number (randx)
+!JDM-SWiFT      randx = randx - 0.5
+!JDM-SWiFT      DO K = 1, 4 
+
+     DO K = 1, nkp  !JDM-SWiFT
+
+     call random_number (randx) !JDM-SWiFT
+     randx = randx - 0.5        !JDM-SWiFT
 
 !  No bubbles for LES!
 !  put in preturbation theta (bubble) and recalc density.  note,
@@ -1383,7 +1401,8 @@ CONTAINS
         RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
         IF(RAD <= 1.) THEN
 !          grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
-           grid%t_1(i,k,j)=grid%t_1(i,k,j)+ 0.1 *randx
+!JDM-SWiFT           grid%t_1(i,k,j)=grid%t_1(i,k,j)+ 0.1 *randx
+           grid%t_1(i,k,j)=grid%t_1(i,k,j)+randx*sf(k) !JDM-SWiFT
            grid%t_2(i,k,j)=grid%t_1(i,k,j)
            qvf = 1. + rvovrd*moist(i,k,j,P_QV)
            grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
