@@ -1504,13 +1504,16 @@ The following are for observation nudging:
                                                  -1 = Mellor-Yamada 1D PBL w/ PBL approximation - vertical mixing handled by
                                                        parameterization and horizontal mixing handled by Smagorinsky.
                                                        PBL scheme must be turned off (bl_pbl_physics = 0). Must be used with
-                                                       diff_opt = 1 or = 2 and km_opt = 4.
+                                                       diff_opt = 1 or = 2 and km_opt = 4. Original WRF coordinate
+                                                       system (hybrid_opt = 0) must be selected. Recommended use sf_sfclay_physics = 1.
                                                   1 = Mellor-Yamada 3D PBL w/ PBL approximation - vertical and horizontal mixing
                                                        handled by parameterization. PBL scheme must be turned off (bl_pbl_physics = 0).
-                                                       Must be used with diff_opt = 0.
+                                                       Must be used with diff_opt = 0. Original WRF coordinate
+                                                       system (hybrid_opt = 0) must be selected. Recommended use sf_sfclay_physics = 1.
                                                   2 = Mellor-Yamada 3D PBL - vertical and horizontal mixing handled by 
                                                        parameterization. PBL scheme must be turned off (bl_pbl_physics = 0).
-                                                       Must be used with diff_opt = 0.
+                                                       Must be used with diff_opt = 0. Original WRF coordinate
+                                                       system (hybrid_opt = 0) must be selected. Recommended use sf_sfclay_physics = 1.
  pbl3d_sfc_opt(max_dom)              = 0,       ! 3D PBL surface flux option
                                                   0 = off (default)
                                                   1 = constant values for similarity functions
@@ -1518,6 +1521,7 @@ The following are for observation nudging:
  pbl3d_l_opt(max_dom)                = 1,       ! 3D PBL length scale option
                                                   1 = Mellor-Yamada center of mass length scale (based on Blackadar) (default)
                                                   2 = Mellor-Yamada-Nakanishi-Niino length scale (original constants)
+                                                  3 = BouLac length scale (based on Bougeault and LaCarrere, 1989)
  pbl3d_nsteps(max_dom)               = 1,       ! 3D PBL number of parameterization substeps
  pbl3d_prog(max_dom)                 = 0,       ! 3D PBL closure level option
                                                   0 = Level 2 Mellor-Yamada model (diagnostic TKE) (default)

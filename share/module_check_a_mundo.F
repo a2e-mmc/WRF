@@ -387,6 +387,19 @@
       ENDDO
 
 !-----------------------------------------------------------------------
+! Check that original WRF coordinate system is selected if 3D PBL is active
+!-----------------------------------------------------------------------
+
+      DO i = 1, model_config_rec % max_dom
+         IF ( ( model_config_rec % hybrid_opt    .NE. 0 .AND. &
+              ( model_config_rec % pbl3d_opt(i)  .NE. 0       ) ) ) THEN
+            wrf_err_message = '--- ERROR: Set hybrid_opt=0 to use pbl3d_opt'
+            CALL wrf_debug ( 0, TRIM( wrf_err_message ) )
+            count_fatal_error = count_fatal_error + 1
+         END IF
+      ENDDO
+
+!-----------------------------------------------------------------------
 ! Check  MAD-WRF configuration
 !-----------------------------------------------------------------------
       DO i = 1, model_config_rec % max_dom

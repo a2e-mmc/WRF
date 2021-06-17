@@ -504,6 +504,10 @@ BENCH_START(tke_diff_bc_tim)
          !$OMP END PARALLEL DO
 BENCH_END(tke_diff_bc_tim)
 
+         END IF
+
+         IF (config_flags%diff_opt .eq. 2 .OR. config_flags%diff_opt .eq. 1) THEN
+
 BENCH_START(deform_div_tim)
 
          !$OMP PARALLEL DO   &
@@ -1206,7 +1210,7 @@ BENCH_END(hor_diff_tim)
            DO ij = 1 , grid%num_tiles
              CALL wrf_debug (200 , ' call Calc_turb_fluxes_driver')
              CALL Calc_turb_fluxes_driver (config_flags = config_flags, &
-             dz = dz8w, z_at_mass = grid%z, u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, &
+             dz = dz8w, z_at_mass = grid%z, z_at_w = grid%z_at_w, u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, &
              th = th_phy, th2 = grid%th_tmp, qv = grid%qv_tmp, qc = moist(:,:,:,P_QC), &
              qr = moist(:,:,:,P_QR), qi = moist(:,:,:,P_QI), qs = moist(:,:,:,P_QS), qg = moist(:,:,:,P_QG), &
              qnc = scalar(:,:,:,P_QNC), qnr = scalar(:,:,:,P_QNR), qni = scalar(:,:,:,P_QNI), &
@@ -1218,7 +1222,7 @@ BENCH_END(hor_diff_tim)
              q_sq_vdiff_tend = grid%q_sq_vdiff, q_sq_hdiff_tend = grid%q_sq_hdiff, q_sq_shear_tend = grid%q_sq_shear, &
              q_sq_buoyancy_tend = grid%q_sq_buoyancy, q_sq_dissip_tend = grid%q_sq_dissip, &
              khx = grid%tf_khx, khy = grid%tf_khy, khz = grid%tf_khz, &
-             l_master = grid%l_master, l_master_at_mass = grid%l_master_at_mass, & ! ok
+             l_master = grid%l_master, l_master_at_mass = grid%l_master_at_mass, l_boulac = grid%l_boulac, & ! ok
              msfux = grid%msfux, msfuy = grid%msfuy, msfvx = grid%msfvx, &
              msfvy = grid%msfvy, msftx = grid%msftx, msfty = grid%msfty, &
              dx = grid%dx, dy = grid%dy, &
