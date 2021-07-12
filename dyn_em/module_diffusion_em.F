@@ -5,7 +5,7 @@
 
     USE module_bc, only: set_physical_bc3d, set_physical_bc2d ! XZ
     USE module_state_description, only: p_m23, p_m13, p_m22, p_m33, p_r23, p_r13, p_r12, p_m12, p_m11, &
-                                        p_mh1, p_mh2, p_mh3, &
+                                        p_mh1, p_mh2, p_mh3, p_mq1, p_mq2, p_mq3, &
                                         P_QNS, P_QNR, P_QNG, P_QT, P_QNH, P_QVOLG ! XZ
     USE module_big_step_utilities_em, only: grid_config_rec_type, param_first_scalar, p_qv, p_qi, p_qc
     USE module_model_constants
@@ -3012,9 +3012,11 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
 ! JDM-MMC
     IF ( ( config_flags%sfs_opt .GT. 0 ) .OR. ( config_flags%m_opt .EQ. 1 ) ) THEN 
 
+       ! heat flux output
        CALL horizontal_diffusion_s_get_flux  ( nba_mij(ims,kts,jms,P_mh1),             &
                                                nba_mij(ims,kts,jms,P_mh2),             &
-                                               config_flags, thp,                      &  
+                                               config_flags,                           &
+                                               thp,                                    &  
                                                msftx, msfty, msfux, msfuy,             &
                                                msfvx, msfvy, xkhh, rdx, rdy,           &
                                                fnm, fnp, cf1, cf2, cf3,                &
@@ -3023,7 +3025,22 @@ SUBROUTINE horizontal_diffusion_2 ( rt_tendf, ru_tendf, rv_tendf, rw_tendf,    &
                                                ids, ide, jds, jde, kds, kde,           &
                                                ims, ime, jms, jme, kms, kme,           &
                                                its, ite, jts, jte, kts, kte            )
-     
+
+       ! vapor flux output
+       CALL horizontal_diffusion_s_get_flux  ( nba_mij(ims,kts,jms,P_mq1),             &
+                                               nba_mij(ims,kts,jms,P_mq2),             &
+                                               config_flags,                           &
+                                               moist(ims,kms,jms,P_QV),                &
+                                               msftx, msfty, msfux, msfuy,             &
+                                               msfvx, msfvy, xkhh, rdx, rdy,           &
+                                               fnm, fnp, cf1, cf2, cf3,                &
+                                               zx, zy, rdz, rdzw, dnw, dn, rho,        &
+                                               .false.,                                &
+                                               ids, ide, jds, jde, kds, kde,           &
+                                               ims, ime, jms, jme, kms, kme,           &
+                                               its, ite, jts, jte, kts, kte            )
+  
+       
     ENDIF
 
     
@@ -4583,10 +4600,12 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
              -g*1.61*theta(i,kts,j)*qfx(i,j)/dnw(kts)
       ENDIF
+      
       IF ( (config_flags%m_opt .EQ. 1) .OR. (config_flags%sfs_opt .GT. 0) ) THEN !JDM-MMC
          nba_mij(i,kts,j,P_mh3) = heat_flux
       ENDIF
-    ENDDO
+
+   ENDDO
     ENDDO
 
   CASE (1) ! use surface heat flux computed from surface routine
@@ -4600,10 +4619,12 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
        if(config_flags%use_theta_m == 1)THEN
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
              -g*1.61*theta(i,kts,j)*qfx(i,j)/dnw(kts)
-       ENDIF
+      ENDIF
+      
       IF ( (config_flags%m_opt .EQ. 1) .OR. (config_flags%sfs_opt .GT. 0) ) THEN !JDM-MMC
          nba_mij(i,kts,j,P_mh3) = heat_flux
       ENDIF
+
     ENDDO
     ENDDO
 
@@ -4663,6 +4684,18 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                      ims, ime, jms, jme, kms, kme,        &
                                      its, ite, jts, jte, kts, kte        )
 
+!JDM-MMC-------------------------------------------------------------------------
+    IF ( ( config_flags%sfs_opt .GT. 0 ) .OR. ( config_flags%m_opt .EQ. 1 ) .AND. ( im == P_QV ) ) THEN 
+   
+      CALL vertical_diffusion_s_get_flux( nba_mij(ims,kms,jms,P_mq3),            &
+                                          config_flags, var_mix, xkhv,           &
+                                          dn, dnw, rdz, rdzw, fnm, fnp, rho,     &
+                                          .false.,                               &
+                                          ids, ide, jds, jde, kds, kde,          &
+                                          ims, ime, jms, jme, kms, kme,          &
+                                          its, ite, jts, jte, kts, kte          )
+    ENDIF 
+
 !*****************************************
 !*****************************************
 !MODIFICATIONS for water vapor flux
@@ -4678,6 +4711,11 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
           moist_flux = qfx(i,j)
           moist_tendf(i,kts,j,im)=moist_tendf(i,kts,j,im)  &
                -g*moist_flux/dnw(kts)
+
+          IF ( (config_flags%m_opt .EQ. 1) .OR. (config_flags%sfs_opt .GT. 0) ) THEN !JDM-MMC
+             nba_mij(i,kts,j,P_mq3) = moist_flux
+          ENDIF
+
        ENDDO
        ENDDO
     ENDIF

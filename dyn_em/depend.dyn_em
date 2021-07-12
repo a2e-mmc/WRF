@@ -263,6 +263,7 @@ solve_em.o:     module_small_step_em.o \
                 module_avgflx_em.o              \
 		module_polarfft.o \
                 module_tsout.o   \
+                module_column_out.o \
                 module_horizontal_slices.o   \
 		../frame/module_domain.o \
 		../frame/module_configure.o  \
@@ -334,6 +335,9 @@ module_scpm_jdm.o: \
 
 module_tsout.o: \
 		../share/module_model_constants.o
+
+module_column_out.o: \
+                ../frame/module_dm.o  
 
 module_horizontal_slices.o: \
                 ../share/module_model_constants.o

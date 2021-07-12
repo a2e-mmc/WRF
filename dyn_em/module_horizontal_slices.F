@@ -6,14 +6,18 @@ USE module_model_constants
 
 CONTAINS
 
-SUBROUTINE compute_horizontal_slices( slices_u, slices_v,             &
-                                      slices_w, slices_t, slices_z,   &
-                                      u, v, w, t, z, z_at_w, ht,      &
-                                      num_slices,                     &
-                                      slice_heights,                  &
-                                      ids, ide, jds, jde, kds, kde,   &
-                                      ims, ime, jms, jme, kms, kme,   &
-                                      its, ite, jts, jte, kts, kte      )
+SUBROUTINE compute_horizontal_slices( slices_u, slices_v,                 &
+                                      slices_w, slices_t,                 &
+                                      slices_m13, slices_m23,             &
+                                      slices_mh3, slices_tke,             & 
+                                      slices_z,                           &
+                                      u, v, w, t, m13, m23, mh3, tke,     &
+                                      z, z_at_w, ht,                      &
+                                      num_slices,                         &
+                                      slice_heights,                      &
+                                      ids, ide, jds, jde, kds, kde,       &
+                                      ims, ime, jms, jme, kms, kme,       &
+                                      its, ite, jts, jte, kts, kte         )
 
 !=======================================================================
 !
@@ -26,12 +30,15 @@ SUBROUTINE compute_horizontal_slices( slices_u, slices_v,             &
 
    IMPLICIT NONE
 
-   REAL, DIMENSION(ims:ime,1:num_slices,jms:jme), INTENT( OUT ) :: slices_u, slices_v, &
-                                                                   slices_w, slices_t
+   REAL, DIMENSION(ims:ime,1:num_slices,jms:jme), INTENT( OUT ) :: slices_u, slices_v,     &
+                                                                   slices_w, slices_t,     &
+                                                                   slices_m13, slices_m23, &
+                                                                   slices_mh3, slices_tke
 
+   
    REAL, DIMENSION(1:num_slices), INTENT( OUT ) :: slices_z
    
-   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(  IN ) :: u, v, w, t, z, z_at_w
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(  IN ) :: u, v, w, t, m13, m23, mh3, tke, z, z_at_w
 
    REAL, DIMENSION(ims:ime,jms:jme), INTENT(  IN ) :: ht
    
@@ -82,7 +89,10 @@ SUBROUTINE compute_horizontal_slices( slices_u, slices_v,             &
                    fac_1 = d_1/d_z
              
                    slices_w(i,k_slice,j) = fac_2*w(i,k-1,j) + fac_1*w(i,k,j)
-
+                   slices_m13(i,k_slice,j) = fac_2*( 0.5*( m13(i,k-1,j) + m13(i+1,k-1,j) ) ) + fac_1*( 0.5*( m13(i,k,j) + m13(i+1,k,j) ) )
+                   slices_m23(i,k_slice,j) = fac_2*( 0.5*( m23(i,k-1,j) + m23(i,k-1,j+1) ) ) + fac_1*( 0.5*( m23(i,k,j) + m23(i,k,j+1) ) )
+                   slices_mh3(i,k_slice,j) = fac_2*mh3(i,k-1,j) + fac_1*mh3(i,k,j)
+                   
 !                   IF ( (i .EQ. its+2) .AND. (j .EQ. jts+2) )print*,k,fac_1*z_at_w(i,k,j)+fac_2*z_at_w(i,k-1,j)
                    
                    GOTO 1
@@ -112,7 +122,8 @@ SUBROUTINE compute_horizontal_slices( slices_u, slices_v,             &
                   slices_u(i,k_slice,j) = fac_2*u_m_1 + fac_1*u_m_2
                   slices_v(i,k_slice,j) = fac_2*v_m_1 + fac_1*v_m_2
                   slices_t(i,k_slice,j) = fac_2*t(i,k-1,j) + fac_1*t(i,k,j)
-
+                  slices_tke(i,k_slice,j) = fac_2*tke(i,k-1,j) + fac_1*tke(i,k,j)
+                  
 !                   IF ( (i .EQ. its+2) .AND. (j .EQ. jts+2) )print*,k,fac_1*z(i,k,j)+fac_2*z(i,k-1,j)
                   
                   GOTO 2

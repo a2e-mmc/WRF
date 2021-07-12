@@ -28,6 +28,7 @@ MODULES =                 		\
 	module_stoch.o			\
 	module_after_all_rk_steps.o	\
         module_tsout.o                  \
+        module_column_out.o             \
         module_horizontal_slices.o      \
         module_cellpert.o                  \
 	$(CASE_MODULE)

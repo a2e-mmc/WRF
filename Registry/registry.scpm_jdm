@@ -8,4 +8,8 @@ state   integer prtseed  k      misc            1       -       r       "prtseed
 state   real    m_pblh   ij     misc            1       -       rhdf    "m_pblh"       "PBL height for stoch. LES inflow perts" "m"
 
 rconfig	integer scpm_jdm_opt   	namelist,dynamics       max_domains     0       -       "Option to use stoch LES inflow perts, 0 is off"
+rconfig integer scpm_nb         namelist,dynamics       max_domains     0       -       "scpm_*b applies perturbations to each lateral boundary independently."
+rconfig integer scpm_sb         namelist,dynamics       max_domains     0       -       "1 applies perturbations to a boundary, 0 does not."
+rconfig integer scpm_eb         namelist,dynamics       max_domains     0       -       "If scpmn*b are all 0, then the subroutine chooses"
+rconfig integer scpm_wb         namelist,dynamics       max_domains     0       -       "which bouhdary based on the wind direction at 1.1pblh."
 rconfig	integer m_pblh_opt    	namelist,dynamics       max_domains     0       -       "1 to calculate mesoscale pblh and pass to LES for stoch LES inflow perts, 0 is off"

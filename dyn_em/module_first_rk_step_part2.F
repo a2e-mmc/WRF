@@ -397,12 +397,16 @@ ENDIF
 
 IF (  config_flags%scpm_jdm_opt .GT. 0 ) THEN   
 
-   IF (  config_flags%scpm_jdm_opt .EQ. 1 ) THEN   
+   IF (  config_flags%scpm_jdm_opt .LE. 6 ) THEN   
             !$OMP PARALLEL DO   &
             !$OMP PRIVATE ( ij )
             DO ij = 1 , grid%num_tiles
 
               CALL calc_scpm_jdm_t ( config_flags%scpm_jdm_opt,                  &
+                                     config_flags%scpm_nb,                       &
+                                     config_flags%scpm_sb,                       & 
+                                     config_flags%scpm_eb,                       &
+                                     config_flags%scpm_wb,                       &
                                      config_flags%m_pblh_opt,                    &
                                      grid%prttms, grid%prtdt, grid%prtnk,        &
                                      grid%prtz, grid%prtseed, grid%pert_t,       &  

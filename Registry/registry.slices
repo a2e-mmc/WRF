@@ -3,18 +3,24 @@
 # 2D horizontal slice output, J. Mirocha (LLNL) and P. Hawbecker (NCAR), January 2021
 #
 
-state    real       slices_z       {nslices}          misc         1     -     h      "slices_z"       "heights of output slices"  "m"    
+state    real       slices_z       {nslices}          misc         1     -     h3      "slices_z"       "heights of output slices"  "m"    
 
-state    real       slices_u       i{nslices}j        misc         1     -     h      "slices_u"       "2D slices of u"            "m s-1"
-state    real       slices_v       i{nslices}j        misc         1     -     h      "slices_v"       "2D slices of v"            "m s-1"
-state    real       slices_w       i{nslices}j        misc         1     -     h      "slices_w"       "2D slices of w"            "m s-1"    
-state    real       slices_t       i{nslices}j        misc         1     -     h      "slices_t"       "2D slices of T"            "K"    
+state    real       slices_u       i{nslices}j        misc         1     -     h3      "slices_u"       "2D slices of u"            "m s-1"
+state    real       slices_v       i{nslices}j        misc         1     -     h3      "slices_v"       "2D slices of v"            "m s-1"
+state    real       slices_w       i{nslices}j        misc         1     z     h3      "slices_w"       "2D slices of w"            "m s-1"    
+state    real       slices_t       i{nslices}j        misc         1     -     h3      "slices_t"       "2D slices of T"            "K"    
+state    real       slices_m13     i{nslices}j        misc         1     z     h3      "slices_m13"     "2D slices of m13"          "m^2 s-2"    
+state    real       slices_m23     i{nslices}j        misc         1     z     h3      "slices_m23"     "2D slices of m23"          "m^2 s-2"    
+state    real       slices_mh3     i{nslices}j        misc         1     z     h3      "slices_mh3"     "2D slices of mh3"          "K m s-1"     
+state    real       slices_tke     i{nslices}j        misc         1     -     h3      "slices_tke"     "2D slices of tke"          "K m s-1"     
+
+
 
 rconfig  integer    slice_opt      namelist,dynamics  max_domains  0           -      "slice_opt"      "1 to output slices"        " "
 
-rconfig  integer    num_slices     namelist,dynamics  1            1           h      "num_slices"     "Number of slices"          " "
+rconfig  integer    num_slices     namelist,dynamics  1            1           -      "num_slices"     "Number of slices"          " "
 
 rconfig  real       slice_heights  namelist,dynamics  max_eta      -1.0        -      "slice_heights"  "Heights of slices"         " "
 
 package  no_slices  slice_opt==0   -                 - 
-package  slices     slice_opt==1   -                 state:slices_z,slices_u,slices_v,slices_w,slices_t
+package  slices     slice_opt==1   -                 state:slices_z,slices_u,slices_v,slices_w,slices_t,slices_m13,slices_m23,slices_mh3,slices_tke

@@ -81,6 +81,7 @@ SUBROUTINE solve_em ( grid , config_flags  &
    USE module_tsout             !JDM-MMC
    USE module_horizontal_slices !JDM-MMC
    USE module_cellpert          ! DME-MMC
+   USE module_column_out !JDM-MMC
 
    IMPLICIT NONE
 
@@ -4864,23 +4865,69 @@ BENCH_END(bc_2d_tim)
     !$OMP PARALLEL DO   &
     !$OMP PRIVATE ( ij )
     DO ij = 1 , grid%num_tiles
-       CALL compute_horizontal_slices( grid%slices_u, grid%slices_v,                &
-                                       grid%slices_w, grid%slices_t, grid%slices_z, &
-                                       grid%u_2, grid%v_2, grid%w_2, grid%t_2,      &  
-                                       grid%z, grid%z_at_w, grid%ht,                &
-                                       config_flags%num_slices,                     &
-                                       model_config_rec%slice_heights,              &
-                                       ids, ide, jds, jde, kds, kde,                & 
-                                       ims, ime, jms, jme, kms, kme,                &
-                                       grid%i_start(ij), grid%i_end(ij),            &
-                                       grid%j_start(ij), grid%j_end(ij),            &
-                                       k_start, k_end                                 )
+       CALL compute_horizontal_slices( grid%slices_u, grid%slices_v,                      &
+                                       grid%slices_w, grid%slices_t,                      &
+                                       grid%slices_m13, grid%slices_m23,                  &
+                                       grid%slices_mh3, grid%slices_tke,                  &
+                                       grid%slices_z,                                     &
+                                       grid%u_2, grid%v_2, grid%w_2, grid%t_2,            &
+                                       nba_mij(ims,kms,jms,P_m13),                        &
+                                       nba_mij(ims,kms,jms,P_m23),                        &
+                                       nba_mij(ims,kms,jms,P_mh3),                        &
+                                       grid%tke_2,                                        &
+                                       grid%z, grid%z_at_w, grid%ht,                      &
+                                       config_flags%num_slices,                           &
+                                       model_config_rec%slice_heights,                    &
+                                       ids, ide, jds, jde, kds, kde,                      & 
+                                       ims, ime, jms, jme, kms, kme,                      &
+                                       grid%i_start(ij), grid%i_end(ij),                  &
+                                       grid%j_start(ij), grid%j_end(ij),                  &
+                                       k_start, k_end                                      )
      
     END DO
     !$OMP END PARALLEL DO
 
    ENDIF
-   
+ 
+! JDM-MMC
+   IF ( config_flags%column_out_opt .EQ. 1 ) THEN
+
+    CALL wrf_debug ( 10 , ' call column_calc' )
+
+    !$OMP PARALLEL DO   &
+    !$OMP PRIVATE ( ij )
+    DO ij = 1 , grid%num_tiles
+
+       CALL compute_column_output( grid%ucol, grid%vcol, grid%wcol, grid%tcol, grid%pcol,  &
+                                   grid%tkecol, grid%t11col, grid%t22col, grid%t33col,     &
+                                   grid%t12col, grid%t13col, grid%t23col, grid%h3col,      &
+                                   grid%zcol, grid%uscol, grid%z0col,                      &
+                                   config_flags%column_out_i, config_flags%column_out_j,   &
+                                   grid%u_2, grid%v_2, grid%w_2, grid%t_2,                 &
+                                   grid%p, grid%pb, grid%ph_2, grid%phb, grid%tke_2,       &
+                                   nba_mij(ims,kms,jms,P_m11),                             &
+                                   nba_mij(ims,kms,jms,P_m22),                             &
+                                   nba_mij(ims,kms,jms,P_m33),                             &
+                                   nba_mij(ims,kms,jms,P_m12),                             &
+                                   nba_mij(ims,kms,jms,P_m13),                             &
+                                   nba_mij(ims,kms,jms,P_m23),                             &
+                                   nba_mij(ims,kms,jms,P_mh3),                             &
+                                   grid%ustm, grid%znt, grid%ht,                           &
+                                   ids, ide, jds, jde, kds, kde,                           &
+                                   ims, ime, jms, jme, kms, kme,                           &
+                                   grid%i_start(ij), grid%i_end(ij),                       &
+                                   grid%j_start(ij), grid%j_end(ij),                       &
+                                   k_start, k_end                                          )
+      
+    END DO
+    !$OMP END PARALLEL DO
+
+    ENDIF
+!-----------------------------JDM-MMC END
+
+
+
+  
 ! calculate cell-centered variables for reduced output
 
    IF ( config_flags%tsout_opt .EQ. 1 ) THEN

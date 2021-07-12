@@ -51,15 +51,16 @@
 !=======================================================================
  
     SUBROUTINE calc_scpm_jdm_t( les_pert_opt,                      &
-                            m_pblh_opt,                        &
-                            prttms, prtdt, prtnk,              &
-                            prtz, prtseed, pert_t,             &
-                            mpblh,                             &
-                            t, u, v, rdz,                      &
-                            dx, dt,                            &
-                            ids, ide, jds, jde, kds, kde,      &
-                            ims, ime, jms, jme, kms, kme,      &
-                            its, ite, jts, jte, kts, kte       )
+                                nb, sb, eb, wb,                    &
+                                m_pblh_opt,                        &
+                                prttms, prtdt, prtnk,              &
+                                prtz, prtseed, pert_t,             &
+                                mpblh,                             &
+                                t, u, v, rdz,                      &
+                                dx, dt,                            &
+                                ids, ide, jds, jde, kds, kde,      &
+                                ims, ime, jms, jme, kms, kme,      &
+                                its, ite, jts, jte, kts, kte       )
 
 !-----------------------------------------------------------------------
 
@@ -85,18 +86,20 @@
     
     INTEGER, DIMENSION( kms:kme ),                INTENT( INOUT ) :: prtseed   ! 1D variable to store variable-length seed array
 
-    INTEGER, INTENT( IN    ) :: les_pert_opt           ! which perturbation option to use
-    INTEGER, INTENT( IN    ) :: m_pblh_opt             ! whether to use (1) mesoscale PBL height or not (0)
-    REAL,    INTENT( INOUT ) :: prtz                   ! height over swhich to apply perturbations
-    INTEGER, INTENT( INOUT ) :: prtnk                  ! number of vertical grid cells over which to apply perturbations
-    REAL,    INTENT( IN    ) :: dt                     ! model time step
-    REAL,    INTENT( IN    ) :: dx                     ! horizontal grid spacing
+    INTEGER, INTENT( IN    ) :: les_pert_opt        ! which perturbation option to use
+    INTEGER, INTENT( IN    ) :: nb, sb, eb, wb      ! specific boundaries to apply pertorbations to 
+    INTEGER, INTENT( IN    ) :: m_pblh_opt          ! whether to use (1) mesoscale PBL height or not (0)
+    REAL,    INTENT( INOUT ) :: prtz                ! height over swhich to apply perturbations
+    INTEGER, INTENT( INOUT ) :: prtnk               ! number of vertical grid cells over which to apply perturbations
+    REAL,    INTENT( IN    ) :: dt                  ! model time step
+    REAL,    INTENT( IN    ) :: dx                  ! horizontal grid spacing
 
     REAL, DIMENSION( its:ite, kts:kte, jts:jte ) :: z  ! height above surface at midpoint levels   
     REAL, DIMENSION( its:ite, jts:jte ) :: pblh        ! height above surface at midpoint levels   
     
     INTEGER :: i, j, k, big_k, slab_k, m            ! loop variables
     INTEGER :: i_start, i_end, j_start, j_end       ! patch endpoints
+    INTEGER :: north, south, east, west             ! designate which boundaries to apply perturbations
     INTEGER :: i_seed                               ! size of seed
     INTEGER :: seedsum                              ! variable for summing the seed
     INTEGER :: ngc_h, ngc_v                         ! number of gridcells in i and j directions for each perturbation cell
@@ -104,7 +107,7 @@
     INTEGER :: ncells_h
     INTEGER :: n_slabs_k                            ! number of perturbations cells in horizontal and vertical directions
     INTEGER :: k_slab_start, k_slab_end             ! vertical indices over which to apply perturbations
-    INTEGER :: north, south, east, west, nsew       !logic for identification of LBs to perturb
+    INTEGER :: nsew                                 ! logic for identification of LB end points to perturb
     INTEGER :: k_geo                                ! k index at which h_wg is computed
     REAL    :: h_geo                                ! height at which to estimate ug
     REAL    :: ugeosum, vgeosum
@@ -156,7 +159,7 @@
     
     n_slabs_k = kde/ngc_v
     
-    pblh_def  = 100.0 !1000.0  !default pbl height if not using m_pblh_opt
+    pblh_def  = 50.0 !1000.0  !default pbl height or minimum if using m_pblh_opt
     
     ! LOOP VER ALL VERTICAL PERTURBATION SLABS TO SEE IF IT IS TIME TO START OR REFRESH
 
@@ -198,7 +201,7 @@
              
              DO j=j_start, j_end
                 DO i=i_start, i_end
-                   pblh(i,j) = mpblh(i,j)
+                   pblh(i,j) = MAX(mpblh(i,j),pblh_def)
                 END DO
              END DO
              
@@ -331,35 +334,45 @@
              !print*,'vgeolbavg ',vgeolbavg
              !print*,'uslablbsum ',uslablbavg
              !print*,'vslablbavg ',vslablbavg
-             
              !print*,'anglelbavg ',anglelbavg
-             
-             north = 0
-             east = 0
-             south = 0
-             west = 0
-             
-             IF ( ugeolbsum .GT. 0.0 ) west = 1
-             IF ( ugeolbsum .LT. 0.0 ) east = 1
-             IF ( vgeolbsum .GT. 0.0 ) south = 1
-             IF ( vgeolbsum .LT. 0.0 ) north = 1
-             
+
+             north = nb
+             south = sb
+             east = eb
+             west = wb
+
+             IF ( (nb + sb + eb + wb ) .EQ. 0 ) THEN ! Perturb boundaries with inflow
+                IF ( vgeolbsum .LT. 0.0 ) north = 1
+                IF ( vgeolbsum .GT. 0.0 ) south = 1
+                IF ( ugeolbsum .LT. 0.0 ) east =  1
+                IF ( ugeolbsum .GT. 0.0 ) west = 1
+             END IF
+
+             !IF (les_pert_opt .EQ. 1 ) THEN      ! Perturb west boundary only
+             !1   west = 1
+             !1ELSE IF (les_pert_opt .EQ. 2 ) THEN ! Perturb north boundary only
+             !   north = 1  
+
+
+
+             !ELSE IF (les_pert_opt .EQ. 3 ) THEN ! Perturb east boundary only
+             !   east = 1
+             !ELSE IF (les_pert_opt .EQ. 4 ) THEN ! Perturb south boundary only
+             !   south = 1
+             !ELSE IF (les_pert_opt .EQ. 5 ) THEN ! Perturb all boundaries
+             !   north = 1
+             !   east = 1
+             !   south = 1
+             !   west = 1
+             !ELSE  IF (les_pert_opt .EQ. 6 ) THEN ! Perturb boundaries with inflow
+             !   IF ( ugeolbsum .GT. 0.0 ) west = 1
+             !   IF ( ugeolbsum .LT. 0.0 ) east =  1
+             !   IF ( vgeolbsum .GT. 0.0 ) south = 1
+             !   IF ( vgeolbsum .LT. 0.0 ) north = 1
+             !ENDIF             
+              
              ! print*,'uwsgpsumdsum,vwsgpsumdsum',uwsgpsumdsum,vwsgpsumdsum
              ! print*,'n, s, e, w',north,south,east,west     
-             
-             !
-             ! Uncomment to select your own inflow/outflow boundaries
-             !
-             ! north = 0
-             ! east = 0
-             ! south = 0
-             ! west = 1
-             
-             ! print*,'Applying perturbations to the following boundary(ies):'
-             ! IF (north .EQ. 1) print*,'north'
-             ! IF (south .EQ. 1) print*,'south'
-             ! IF (east .EQ. 1) print*,'east'
-             ! IF (west .EQ. 1) print*,'west'
              
              nsew = 0
              IF  ( (west + east) .EQ. 2) nsew = 1
@@ -374,7 +387,7 @@
                 STOP
                 
              ENDIF
-             
+
              tpertmag = sca_fac*(wsgeolbavg*wsgeolbavg)/(ek_opt*cp)
 !             tpertmag = 0.25
 
