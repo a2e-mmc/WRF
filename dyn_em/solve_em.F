@@ -3576,7 +3576,11 @@ IF ( config_flags%cell_pert) THEN
           kte = k_end
 
           CALL cp_perturb(grid%Pxy,nt_curr_secs_ini,grid%phb,grid%ph_2,   &
+#ifdef DM_PARALLEL
                           config_flags,grid,mytask,                       &
+#else
+                          config_flags,grid,0,                            &
+#endif
                           its,ite,jts,jte,kts,kte,                        &
                           ids,ide,jds,jde,kds,kde,                        &
                           ips,ipe,jps,jpe,kps,kpe,                        &
