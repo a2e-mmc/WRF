@@ -422,77 +422,6 @@ if(config_flags%use_synthturb .and. config_flags%nested.and.(grid%xtime.ge.0.)) 
 endif
 !RKR-mmc  ends ---------------------------------------------------------------
 
-!JDM Perturbations
-
-
-IF ( ( config_flags%cpm_meso_pblh .EQ. 1 ) .AND. ( config_flags%km_opt .EQ. 4 ) ) THEN   
-
-         !$OMP PARALLEL DO   &
-         !$OMP PRIVATE ( ij )
-         DO ij = 1 , grid%num_tiles
-
-           CALL force_down_meso_pblh( grid%meso_pblh, grid%pblh,         &   
-                                      ids, ide, jds, jde, kds, kde,      &
-                                      ims, ime, jms, jme, kms, kme,      &
-                                      grid%i_start(ij), grid%i_end(ij),  &
-                                      grid%j_start(ij), grid%j_end(ij),  &
-                                      k_start    , k_end                  )
-
-
-        ENDDO
-         !$OMP END PARALLEL DO
-
-ENDIF
-
-
-IF (  config_flags%cpm_opt .GT. 0 ) THEN   
-
-   !JDM   IF (  config_flags%cpm_opt .LE. 6 ) THEN ! Leave hook for other options
-
-            !$OMP PARALLEL DO   &
-            !$OMP PRIVATE ( ij )
-            DO ij = 1 , grid%num_tiles
-
-               CALL calc_cpm_t ( config_flags%cpm_opt,                       &
-                                 config_flags%cpm_lim_z,                     &
-                                 config_flags%cpm_amp,                       &
-                                 config_flags%cpm_pec,                       &
-                                 config_flags%cpm_rim,                       &
-                                 config_flags%cpm_dt,                        &
-                                 config_flags%cpm_lambda,                    &
-                                 config_flags%cpm_nb,                        &
-                                 config_flags%cpm_sb,                        & 
-                                 config_flags%cpm_eb,                        &
-                                 config_flags%cpm_wb,                        &
-                                 config_flags%cpm_ngc_h,                     &
-                                 config_flags%cpm_ncells_h,                  &
-                                 config_flags%cpm_noff_ew_w,                 &
-                                 config_flags%cpm_noff_ew_e,                 &
-                                 config_flags%cpm_noff_ns_s,                 &
-                                 config_flags%cpm_noff_ns_n,                 &
-                                 config_flags%cpm_ngc_v,                     &
-                                 config_flags%cpm_noff_v,                    &
-                                 grid%prttms, grid%prtdt,                    &
-                                 grid%prtseed, grid%pert_t,                  &  
-                                 config_flags%cpm_meso_pblh, grid%meso_pblh, &
-                                 config_flags%cpm_pblh_check,                &
-                                 grid%t_2, grid%u_2, grid%v_2, grid%w_2,     &
-                                 grid%rdz, grid%rdzw,                        &
-                                 grid%dx, grid%dt,                           & 
-                                 ids, ide, jds, jde, kds, kde,               &
-                                 ims, ime, jms, jme, kms, kme,               &
-                                 grid%i_start(ij), grid%i_end(ij),           &
-                                 grid%j_start(ij), grid%j_end(ij),           &
-                                 k_start    , k_end                          )
-
-            ENDDO
-            !$OMP END PARALLEL DO
-            
-!JDM   ENDIF
-
-ENDIF
-
-
 #ifdef DM_PARALLEL
 #  include "HALO_EM_TKE_C.inc"
 #  include "PERIOD_BDY_EM_A1.inc"
@@ -556,6 +485,95 @@ BENCH_START(tke_diff_bc_tim)
          ENDDO
          !$OMP END PARALLEL DO
 BENCH_END(tke_diff_bc_tim)
+
+! JDM MMC starts ------------------------------------------------------------------------------
+
+! The following code blocks are for the cell perturbation method, CPM.
+! The first block forces down the mesoscale PBLH computed using a mesoscale PBL scheme.
+! The second block forces down HFX computed on a mesoscale domain.
+! The third block applies the CPM.
+
+         IF ( ( config_flags%cpm_meso_pblh .EQ. 1 ) .AND. ( config_flags%km_opt .EQ. 4 ) ) THEN   
+
+            !$OMP PARALLEL DO   &
+            !$OMP PRIVATE ( ij )
+            DO ij = 1 , grid%num_tiles
+               
+               CALL force_down_meso_pblh( grid%meso_pblh, grid%pblh,         &   
+                                          ids, ide, jds, jde, kds, kde,      &
+                                          ims, ime, jms, jme, kms, kme,      &
+                                          grid%i_start(ij), grid%i_end(ij),  &
+                                          grid%j_start(ij), grid%j_end(ij),  &
+                                          k_start, k_end                     )
+               
+            ENDDO
+            !$OMP END PARALLEL DO
+                        
+         ENDIF
+                  
+         IF ( ( config_flags%cpm_meso_hfx .EQ. 1 ) .AND. ( config_flags%km_opt .EQ. 4 ) ) THEN   
+
+            !$OMP PARALLEL DO   &
+            !$OMP PRIVATE ( ij )
+            DO ij = 1 , grid%num_tiles
+               
+               CALL force_down_meso_hfx( grid%meso_hfx, grid%hfx, grid%rho,  &   
+                                         ids, ide, jds, jde, kds, kde,       &
+                                         ims, ime, jms, jme, kms, kme,       &
+                                         grid%i_start(ij), grid%i_end(ij),   &
+                                         grid%j_start(ij), grid%j_end(ij),   & 
+                                         k_start, k_end                      )
+               
+            ENDDO
+            !$OMP END PARALLEL DO
+                        
+         ENDIF
+         
+         IF (  config_flags%cpm_opt .GT. 0 ) THEN   
+            
+            !$OMP PARALLEL DO   &
+            !$OMP PRIVATE ( ij )
+            DO ij = 1 , grid%num_tiles
+
+               CALL calc_cpm ( config_flags%cpm_opt,                        &
+                               config_flags%cpm_lim_z,                      &
+                               config_flags%cpm_amp,                        &
+                               config_flags%cpm_pec,                        &
+                               config_flags%cpm_rim,                        &
+                               config_flags%cpm_dt,                         &
+                               config_flags%cpm_lambda,                     &
+                               config_flags%cpm_nb,                         &
+                               config_flags%cpm_sb,                         & 
+                               config_flags%cpm_eb,                         &
+                               config_flags%cpm_wb,                         &
+                               config_flags%cpm_ngc_h,                      &
+                               config_flags%cpm_ncells_h,                   &
+                               config_flags%cpm_noff_h,                     &
+                               config_flags%cpm_ngc_v,                      &
+                               config_flags%cpm_noff_v,                     &
+                               config_flags%spec_bdy_width,                 &
+                               grid%prttms, grid%prtdt,                     &
+                               grid%prtseed, grid%cpm_3d,                   &  
+                               config_flags%cpm_meso_pblh, grid%meso_pblh,  &
+                               config_flags%cpm_pblh_check,                 &
+                               config_flags%cpm_meso_hfx, grid%meso_hfx,    &
+                               config_flags%spec_hfx,                       &
+                               grid%t_2, grid%u_2, grid%v_2, grid%w_2,      &
+                               grid%rho, grid%z, grid%dx, grid%dt,          &
+                               grid%fnm, grid%fnp,                          &
+                               ids, ide, jds, jde, kds, kde,                &
+                               ims, ime, jms, jme, kms, kme,                &
+                               grid%i_start(ij), grid%i_end(ij),            &
+                               grid%j_start(ij), grid%j_end(ij),            &
+                               k_start, k_end                               )
+
+            ENDDO
+            !$OMP END PARALLEL DO
+
+         ENDIF
+
+! JDM MMC ends --------------------------------------------------------------------------------
+
 
 BENCH_START(deform_div_tim)
 
@@ -739,8 +757,8 @@ IF ( ( config_flags%sfs_opt .GT. 0 ) .AND. ( config_flags%diff_opt .eq. 2 ) ) TH
 
 ENDIF
 
-!! ADDED BY MSG FOR GAD
-IF ( config_flags%wp_opt .GT. 0 ) THEN !JDM/BK April 16, 2013
+!! FOR GAD, MMC
+IF ( config_flags%wp_opt .GT. 0 ) THEN 
 
 BENCH_START(wind_param_driver_tim)
        !$OMP PARALLEL DO   &
@@ -757,17 +775,13 @@ BENCH_START(wind_param_driver_tim)
                                   grid%x_turbine,                              &
                                   grid%y_turbine,                              &
                                   grid%x_inflow,                               &
-!RSA
                                   grid%y_inflow,                               &
-!RSA
                                   grid%hub_height,                             &
                                   grid%rotor_diameter,                         &
                                   grid%blade_length,                           &
                                   grid%theta_turbine,                          &
                                   grid%cutinspd, grid%cutoutspd,               &
-!RSA
                                   grid%turb_power,                             &
-!RSA
                                   grid%acc_yaw_err,                            &
                                   grid%wp_acc_u, grid%wp_acc_v, grid%wp_acc_w, &
                                   grid%wp_ts,                                  &
@@ -777,9 +791,7 @@ BENCH_START(wind_param_driver_tim)
                                   config_flags%n_timeseries,                   &
                                   grid%v0t, grid%d0t, grid%itimestep,          &
                                   grid%xlat_v, grid%xlong_u, grid%ht,          &
-!RSA
                                   grid%fnm, grid%fnp,                          &
-!RSA
                                   ids, ide, jds, jde, kds, kde,                &
                                   ims, ime, jms, jme, kms, kme,                &
                                   ips, ipe, jps, jpe, kps, kpe,                &
