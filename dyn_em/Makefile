@@ -7,22 +7,25 @@ RM      =       rm -f
 
 MODULES =                 		\
         module_advect_em.o   		\
-	module_diffusion_em.o  		\
-	module_small_step_em.o 		\
+        module_ieva_em.o            \
+	  module_diffusion_em.o  		\
+	  module_small_step_em.o 		\
         module_big_step_utilities_em.o  \
         module_em.o         		\
         module_solvedebug_em.o    	\
         module_bc_em.o                  \
         module_init_utilities.o         \
         module_wps_io_arw.o             \
-	module_damping_em.o		\
-	module_polarfft.o		\
+	  module_damping_em.o		\
+	  module_polarfft.o		\
         module_force_scm.o              \
         module_first_rk_step_part1.o    \
         module_first_rk_step_part2.o    \
+        module_pbl3d.o                  \
+        module_pbl3d_my.o               \
         module_avgflx_em.o              \
 	module_sfs_nba.o		\
-        module_scpm_jdm.o               \
+        module_les_cpm.o                \
         module_convtrans_prep.o         \
 	module_sfs_driver.o		\
 	module_stoch.o			\
@@ -31,6 +34,7 @@ MODULES =                 		\
         module_column_out.o             \
         module_horizontal_slices.o      \
         module_cellpert.o                  \
+        module_add_synthetic_turb.o     \
 	$(CASE_MODULE)
 
 # possible CASE_MODULE settings

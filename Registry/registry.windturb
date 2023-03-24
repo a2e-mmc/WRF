@@ -1,0 +1,49 @@
+# registry.windturb
+#
+# Generalized Actuator Disk model, Mirocha and Kosovic
+#
+state   real     wp_acc_u        ikj       misc     1       -       h      "wp_acc_u"        ""                                      "m2 s-1"
+state   real     wp_acc_v        ikj       misc     1       -       h      "wp_acc_v"        ""                                      "m2 s-1"
+state   real     wp_acc_w        ikj       misc     1       -       h      "wp_acc_w"        ""                                      "m2 s-1"
+ 
+state   real     wp_ts           ikj       misc     1       -       h      "wp_ts"           ""                                      "" 
+
+state   real     wp_thrust       ij        misc     1       -       h      "wp_thrust"       ""                                      "N"
+state   real     wp_torque       ij        misc     1       -       h      "wp_torque"       ""                                      "Nm"
+state   real     wp_rotrate      ij        misc     1       -       h      "wp_rotrate"      ""                                      "rad s-1"
+state   real     wp_power        ij        misc     1       -       h      "wp_power"        ""                                      "W"   
+ 
+state   real     x_turbine       {ntrb}    misc     1       -       rh     "x_turbine"       "x coordinate of a turbine"             "m"
+state   real     y_turbine       {ntrb}    misc     1       -       rh     "y_turbine"       "y coordinate of a turbine"             "m" 
+state   real     x_inflow        {ntrb}    misc     1       -       rh     "x_inflow"        "x coordinate of turbine inflow calcs"  "m"
+state   real     y_inflow        {ntrb}    misc     1       -       rh     "y_inflow"        "y coordinate of turbine inflow calcs"  "m"
+state   real     hub_height      {ntrb}    misc     1       -       rh     "hub_height"      "hub height of a turbine"               "m" 
+state   real     rotor_diameter  {ntrb}    misc     1       -       rh     "rotor_diameter"  "rotor diameter of a turbine"           "m" 
+state   real     blade_length    {ntrb}    misc     1       -       rh     "blade_length"    "blade length"                          "m" 
+state   real     theta_turbine   {ntrb}    misc     1       -       rh     "theta_turbine"   "angle between turbine and x axis"      "deg"
+state 	real	 cutinspd	 {ntrb}    misc     1	    -	    rh	   "cutin"	     "cut in speed of turbine"               "m/s"
+state	real	 cutoutspd	 {ntrb}	   misc	    1	    -	    rh     "cutout"	     "cut out speed of turbine"              "m/s"
+state	real	 turb_power	 {ntrb}	   misc	    1	    -	    rh     "power"	     "turbine power output"             "kg*m2/s3"
+
+state   real     acc_yaw_err     {ntrb}    misc     1       -       rh     "acc_yaw_err"     "accumulated yaw error"                 "deg^2"    
+state   real     v0t             {ntmetrb} misc     1       -       rh     "v0_time_series"  "hub height wind speed timeseries"      "m s-1"    
+state   real     d0t             {ntmetrb} misc     1       -       rh     "d0_time_series"  "hub height wind direction timeseries"  "deg"    
+
+# rconfig real     u_geostrophic   namelist,dynamics  max_domains     0.0     -      "u_geostrophic"     ""      "m s-1"
+# rconfig real     v_geostrophic   namelist,dynamics  max_domains     0.0     -      "v_geostrophic"     ""      "m s-1"
+# rconfig real     z_rough         namelist,dynamics  max_domains     0.0     -      "z_rough"           ""      "m"
+
+rconfig integer  wp_opt          namelist,physics   max_domains     0      rh      "wp_opt"            ""      ""
+rconfig integer  turbine_opt     namelist,physics   1               15     rh      "turbine_opt"       ""      "" #RSA for turbine-specific functions
+rconfig integer  n_turbines      namelist,physics   1               0      rh      "n_turbines"        ""      ""
+rconfig integer  n_timeseries    namelist,physics   1               0      rh      "n_timeseries"      ""      ""
+rconfig integer  n_tmeturb       namelist,physics   1               0      rh      "n_tmeturb"         ""      ""
+
+rconfig character windturb_spec      namelist,physics   1	    "none"  -	   "windturb_spec"	"" 	"" #RSA file for reading in turbine info
+rconfig logical   turb_loc_in_latlon namelist,physics   1           .false. h      "turb_loc_in_latlon" ""      "" #RSA flag for whether turbine location is lat/lon (else in meters from edge of domain)
+
+package noturbine  wp_opt==0             -             - 
+package genactdisk2 wp_opt==2            -             state:wp_acc_u,wp_acc_v,wp_acc_w,wp_thrust,wp_torque,wp_rotrate,wp_power,x_turbine,y_turbine,hub_height,rotor_diameter,blade_length,theta_turbine,acc_yaw_err,v0t,d0t,wp_ts
+package genactdisk3 wp_opt==3            -             state:wp_acc_u,wp_acc_v,wp_acc_w,wp_thrust,wp_torque,wp_rotrate,wp_power,x_turbine,y_turbine,hub_height,rotor_diameter,blade_length,theta_turbine,turb_power,acc_yaw_err,v0t,d0t,wp_ts
+
+

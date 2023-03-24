@@ -43,6 +43,8 @@ MODULE module_optional_input
               flag_lai12m   , flag_lake_depth , flag_sandfrac , flag_urb_param , flag_var_sso, &
               flag_bathymetry
 
+   integer :: flag_cldmask, flag_cldbasez, flag_cldtopz, flag_brtemp
+
    INTEGER                  :: num_soil_levels_input
    INTEGER                  :: num_st_levels_input , num_sm_levels_input , num_sw_levels_input
    INTEGER                  :: num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc
@@ -329,6 +331,10 @@ USE module_io_domain
       flag_sh       = 0
       flag_speccldl = 0
       flag_speccldf = 0
+      flag_cldmask  = 0
+      flag_cldbasez = 0
+      flag_cldtopz  = 0
+      flag_brtemp   = 0
 
       flag_name(1:8) = 'QV      '
       CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr ) 
@@ -419,6 +425,26 @@ USE module_io_domain
       CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr ) 
       IF ( ierr .EQ. 0 ) THEN
          flag_speccldf = itmp
+      END IF
+      flag_name(1:8) = 'CLDMASK '
+      CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr )
+      IF ( ierr .EQ. 0 ) THEN
+         flag_cldmask = itmp
+      END IF
+      flag_name(1:8) = 'CLDBASEZ'
+      CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr )
+      IF ( ierr .EQ. 0 ) THEN
+         flag_cldbasez = itmp
+      END IF
+      flag_name(1:8) = 'CLDTOPZ '
+      CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr )
+      IF ( ierr .EQ. 0 ) THEN
+         flag_cldtopz = itmp
+      END IF
+      flag_name(1:8) = 'BRTEMP  '
+      CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr )
+      IF ( ierr .EQ. 0 ) THEN
+         flag_brtemp = itmp
       END IF
     
    END SUBROUTINE optional_moist
@@ -734,6 +760,16 @@ USE module_io_domain
       CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr ) 
       IF ( ierr .EQ. 0 ) THEN
          flag_lake_depth      = itmp
+      END IF
+
+      flag_name = '                                                                                '
+
+      flag_bathymetry      = 0
+
+      flag_name(1:10) = 'BATHYMETRY'
+      CALL wrf_get_dom_ti_integer ( fid, 'FLAG_' // flag_name, itmp, 1, icnt, ierr )
+      IF ( ierr .EQ. 0 ) THEN
+         flag_bathymetry      = itmp
       END IF
 
 

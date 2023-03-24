@@ -46,7 +46,6 @@ SUBROUTINE init_domain_constants_em ( parent , nest )
    nest%traj_lat = parent%traj_lat
    nest%this_is_an_ideal_run = parent%this_is_an_ideal_run
    nest%lake_depth_flag = parent%lake_depth_flag
-   ! PSH
    nest%bathymetry_flag = parent%bathymetry_flag
 
    CALL nl_get_mminlu ( 1, char_junk )
@@ -1092,7 +1091,7 @@ SUBROUTINE compute_vcoord_1d_coeffs ( ht, etac, znw, &
          c3f(k) = znw(k)*sin(0.5*3.14159*znw(k))**2
          IF      ( k .EQ. kds ) THEN
             c3f(k) = 1.
-         ELSE IF ( k .EQ. kds ) THEN
+         ELSE IF ( k .EQ. kde ) THEN
             c3f(kde) = 0.
          END IF
       ELSE

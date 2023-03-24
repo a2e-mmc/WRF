@@ -21,6 +21,21 @@ module_advect_em.o: ../share/module_bc.o \
 		../share/module_model_constants.o \
 		../frame/module_wrf_error.o
 
+module_pbl3d.o: module_pbl3d_my.o \
+                module_big_step_utilities_em.o \
+                ../share/module_model_constants.o \
+                ../share/module_bc.o \
+                ../frame/module_comm_dm.o \
+                ../frame/module_state_description.o \
+                ../frame/module_domain.o \
+                ../frame/module_configure.o \
+                ../frame/module_dm.o
+
+module_pbl3d_my.o: module_big_step_utilities_em.o \
+                   ../share/module_model_constants.o \
+                   ../frame/module_state_description.o \
+                   ../frame/module_configure.o
+
 module_bc_em.o: ../share/module_bc.o \
 		../share/module_model_constants.o \
 		../frame/module_configure.o \
@@ -193,12 +208,15 @@ module_initialize_scm_xy.o : \
 module_initialize_real.o :  \
 		nest_init_utils.o	\
 		module_polarfft.o \
+		../phys/module_madwrf.o \
 		../share/module_llxy.o	\
+		../frame/module_dm.o \
 		../frame/module_domain.o \
 		../frame/module_configure.o  \
 		../frame/module_state_description.o \
 		../frame/module_timing.o \
 		../frame/module_dm.o \
+		../phys/module_radiation_driver.o \
 		../share/module_io_domain.o \
 		../share/module_model_constants.o \
 		../share/module_bc.o \
@@ -234,6 +252,7 @@ nest_init_utils.o: \
 start_em.o:     module_bc_em.o \
                 module_avgflx_em.o              \
                 module_stoch.o              \
+                module_pbl3d.o \
 		../frame/module_domain.o \
 		../frame/module_configure.o  \
 		../frame/module_state_description.o \
@@ -304,8 +323,9 @@ module_first_rk_step_part2.o : \
                 module_bc_em.o         \
                 module_stoch.o         \
 		module_sfs_driver.o \
-                module_scpm_jdm.o   \
+                module_les_cpm.o    \
 		module_big_step_utilities_em.o \
+                module_add_synthetic_turb.o \
 		../frame/module_domain.o \
 		../frame/module_state_description.o \
 		../frame/module_driver_constants.o \
@@ -315,7 +335,7 @@ module_first_rk_step_part2.o : \
 		../share/module_bc.o \
 		../frame/module_comm_dm.o \
 		../phys/module_fddaobs_driver.o \
-		../phys/module_fddaobs_driver.o
+		../phys/module_wind_param_driver.o
 
 module_after_all_rk_steps.o : \
                 ../frame/module_state_description.o \
@@ -329,7 +349,7 @@ adapt_timestep_em.o: \
 		../frame/module_configure.o  \
 		../frame/module_dm.o
 
-module_scpm_jdm.o: \
+module_les_cpm.o: \
 		../share/module_model_constants.o \
 		../frame/module_dm.o
 
@@ -341,6 +361,8 @@ module_column_out.o: \
 
 module_horizontal_slices.o: \
                 ../share/module_model_constants.o
+module_add_synthetic_turb.o: \
+                ../frame/module_dm.o
 
 #		../chem/module_chem_utilities.o \
 # 		../chem/module_input_chem_data.o

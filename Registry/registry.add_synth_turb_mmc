@@ -1,0 +1,17 @@
+#
+# Added by Raj Rai, Aug, 2019
+#
+
+state  real  uFluctu  {dXYn}{dZn}{dTn}  misc  1  -  r  "u_fluct"   "fluctuation for u"        "m s-1"
+state  real  vFluctu  {dXYn}{dZn}{dTn}  misc  1  -  r  "v_fluct_"  "fluctuation for v"        "m s-1"
+state  real  wFluctu  {dXYn}{dZn}{dTn}  misc  1  -  r  "w_fluct_"  "fluctuation for w"        "m s-1"
+state  real  tValu    {dTn}             misc  1  -  r  "t_val"     "uvw update time in sec"   "s"
+state  character fname      -           misc  -  -  r  "filename"             ""         ""
+
+rconfig  logical    use_synthturb     namelist,physics   max_domains  .false.  rh  "use_synthturb"     "true if using synthetic flucuations"
+rconfig  integer    nxyCnfg           namelist,physics   1            1        rh  "nxyCnfg"           "number of grids in horizontal direction"
+rconfig  integer    nzCnfg            namelist,physics   1            1        rh  "nzCnfg"            "number of grids in vertical direction"
+rconfig  integer    ntCnfg            namelist,physics   1            1        rh  "ntCnfg"            "number of time-levels"
+rconfig  real       start_synthturb   namelist,physics   1            0        rh  "start_synthturb"   "start time to kick in synthetic turbulence"
+rconfig  integer    nfiles_synthturb  namelist,physics   1            1        rh  "nfiles_synthturb"  "number of 10-min chunk inflow files" 
+rconfig  character  sides_synthturb   namelist,physics   1           "W"       rh  "sides_synthturb"   "sides to add synthetic turbulence"

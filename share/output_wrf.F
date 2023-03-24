@@ -39,7 +39,7 @@
     INTEGER km_opt, diff_opt, damp_opt,  &
             mp_physics, ra_lw_physics, ra_sw_physics, sf_sfclay_physics, &
             sf_surface_physics, bl_pbl_physics, cu_physics, hypsometric_opt, sf_lake_physics, &
-            use_theta_m, use_maxw_level, use_trop_level,hybrid_opt, gwd_opt, use_bathymetry !PSH
+            use_theta_m, use_maxw_level, use_trop_level,hybrid_opt, gwd_opt 
     INTEGER swint_opt, aer_type,aer_aod550_opt,aer_angexp_opt,aer_ssa_opt,aer_asy_opt, aer_opt
     REAL    aer_aod550_val,aer_angexp_val,aer_ssa_val,aer_asy_val,etac
     REAL    khdif, kvdif, swrad_scat, dampcoef,radt,bldt,cudt
@@ -158,7 +158,6 @@
     call nl_get_aer_ssa_val        ( grid%id,  aer_ssa_val        )
     call nl_get_aer_asy_val        ( grid%id,  aer_asy_val        )
     call nl_get_sf_lake_physics    ( grid%id,  sf_lake_physics    )
-    call nl_get_use_bathymetry     ( grid%id,  use_bathymetry     ) ! PSH
     call nl_get_nproc_x            ( 1,        ntasks_x           )
     call nl_get_nproc_y            ( 1,        ntasks_y           )
 
@@ -602,13 +601,12 @@ endif
      IF ( config_flags%perturb_bdy .NE. 0 ) THEN
           CALL wrf_put_dom_ti_integer( fid, 'PERTURB_BDY',        config_flags%perturb_bdy, 1, ierr )
      END IF
-     CALL wrf_put_dom_ti_integer( fid, 'SPEC_BDY_FINAL_MU',  config_flags%spec_bdy_final_mu, 1, ierr )
      CALL wrf_put_dom_ti_integer( fid, 'USE_Q_DIABATIC',     config_flags%use_q_diabatic,    1, ierr )
     END IF
 #endif
 
 ! added by SYHA (09-19-2014)
-#if ((WRF_CHEM == 1) &&  (EM_CORE == 1))
+#if ((WRF_CHEM == 1) &&  (EM_CORE == 1) && (DA_CORE != 1))
      IF ( config_flags%perturb_chem_bdy .NE. 0 ) THEN
           CALL wrf_put_dom_ti_integer( fid, 'PERTURB_CHEM_BDY', config_flags%perturb_chem_bdy, 1, ierr )
      END IF
@@ -651,9 +649,6 @@ endif
     CALL wrf_put_dom_ti_integer ( fid , 'CU_PHYSICS' ,  ibuf , 1 , ierr )
     ibuf(1) = sf_lake_physics
     CALL wrf_put_dom_ti_integer ( fid , 'SF_LAKE_PHYSICS' ,  ibuf , 1 , ierr )
-    ! PSH
-    ibuf(1) = use_bathymetry  
-    CALL wrf_put_dom_ti_integer ( fid , 'USE_BATHYMETRY' ,  ibuf , 1 , ierr )
 
     ! added netcdf-specific metadata:
     IF ( ( use_package( io_form ) == IO_NETCDF ) .OR. &
@@ -799,6 +794,8 @@ endif
         CALL wrf_put_dom_ti_integer   ( fid, 'OPT_SOIL',    config_flags%opt_soil    , 1 , ierr )
         CALL wrf_put_dom_ti_integer   ( fid, 'OPT_PEDO',    config_flags%opt_pedo    , 1 , ierr )
         CALL wrf_put_dom_ti_integer   ( fid, 'OPT_CROP',    config_flags%opt_crop    , 1 , ierr )
+        CALL wrf_put_dom_ti_integer   ( fid, 'OPT_IRR',     config_flags%opt_irr     , 1 , ierr )
+        CALL wrf_put_dom_ti_integer   ( fid, 'OPT_IRRM',    config_flags%opt_irrm    , 1 , ierr )
       ENDIF
 
       CALL wrf_put_dom_ti_integer   ( fid, 'DFI_OPT',          config_flags%dfi_opt      , 1 , ierr )

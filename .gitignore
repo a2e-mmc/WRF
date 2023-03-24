@@ -10,10 +10,19 @@
 # USE CAUTION WHEN ADDING WILDCARDS, as some builds use different filename   #
 # conventions than others                                                    #
 ##############################################################################
-*.exe
-*.o
-*.mod
-*.a
 configure.wrf*
-*.backup
+*.exe
 *.f90
+*.inc
+*.mod
+*.h
+*.c
+*.o
+*.a
+*.log
+tags
+tools/*
+external/*
+run/*
+test/*
+log*

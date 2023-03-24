@@ -2161,9 +2161,18 @@ END SUBROUTINE smag2d_km
 ! tke_seed if the drag and flux are off.
 
     c_k = config_flags%c_k
-    tke_seed = tke_seed_value
-    if( (config_flags%tke_drag_coefficient .gt. epsilon) .or.  &
-        (config_flags%tke_heat_flux .gt. epsilon)  ) tke_seed = 0.
+    tke_seed = 0.
+    IF (config_flags%isfflx .eq. 0) THEN
+      IF ((config_flags%diff_opt .eq. 2) .and. (config_flags%bl_pbl_physics .eq. 0)) THEN
+        IF( (config_flags%tke_drag_coefficient .lt. epsilon) .and.  &
+            (config_flags%tke_heat_flux .lt. epsilon)  )  THEN
+          tke_seed = tke_seed_value
+        ENDIF
+      ELSE
+        !tke_drag_coefficient and tke_heat_flux are irrelevant here
+        tke_seed = tke_seed_value
+      ENDIF
+    ENDIF
 
     DO j = j_start, j_end
     DO k = kts+1, ktf-1
@@ -4594,13 +4603,14 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
     DO i = i_start, i_end
        cpm = cp * (1. + 0.8 * moist(i,kts,j,P_QV))
        hfx(i,j)=heat_flux*cpm*rho(i,kts,j)         ! provided for output only
-       rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
-             -g*heat_flux*rho(i,kts,j)/dnw(kts)
        if(config_flags%use_theta_m == 1)THEN
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
+             -g*heat_flux*(1.+rvovrd*moist(i,kts,j,P_QV))*rho(i,kts,j)/dnw(kts) &
              -g*1.61*theta(i,kts,j)*qfx(i,j)/dnw(kts)
-      ENDIF
-      
+       ELSE
+         rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
+             -g*heat_flux*rho(i,kts,j)/dnw(kts)
+       ENDIF
       IF ( (config_flags%m_opt .EQ. 1) .OR. (config_flags%sfs_opt .GT. 0) ) THEN !JDM-MMC
          nba_mij(i,kts,j,P_mh3) = heat_flux
       ENDIF
@@ -4614,13 +4624,14 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
        cpm = cp * (1. + 0.8 * moist(i,kts,j,P_QV))
        heat_flux = hfx(i,j)/cpm
-       rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
-            -g*heat_flux/dnw(kts)
        if(config_flags%use_theta_m == 1)THEN
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
+             -g*heat_flux*(1.+rvovrd*moist(i,kts,j,P_QV))/dnw(kts) &
              -g*1.61*theta(i,kts,j)*qfx(i,j)/dnw(kts)
-      ENDIF
-      
+       ELSE
+         rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
+             -g*heat_flux/dnw(kts)
+       ENDIF
       IF ( (config_flags%m_opt .EQ. 1) .OR. (config_flags%sfs_opt .GT. 0) ) THEN !JDM-MMC
          nba_mij(i,kts,j,P_mh3) = heat_flux
       ENDIF
@@ -5538,7 +5549,7 @@ END SUBROUTINE vertical_diffusion_s_get_flux
   DO j = j_start, j_end
   DO i = i_start, i_end
      IF(hpbl(i,j).LT.zq(i,2,j)) kpbl(i,j) = 1
-     IF(kpbl(i,j).LT.1) pblflg(i,j) = .false.
+     IF(kpbl(i,j).LE.1) pblflg(i,j) = .false.
   ENDDO
   ENDDO
 
@@ -5563,7 +5574,7 @@ END SUBROUTINE vertical_diffusion_s_get_flux
   DO i = i_start, i_end
       delxy = sqrt(dx/msftx(i,j)*dy/msfty(i,j))
       pu1=pu(delxy,hpbl(i,j))
-      IF(sfcflg(i,j).and.sflux(i,j).GT.0.0)THEN
+      IF((sfcflg(i,j).and.sflux(i,j).GT.0.0) .and. (hpbl(i,j) .GT. 0)) THEN
 !nonlocal momentum flux based on Brown and Grant (1997)
        brint = -sm*ust(i,j)*ust(i,j)*wstar3(i,j)/(hpbl(i,j)*wscale(i,j)**4)
        gamu(i,j) = pu1 * brint*u_phy(i,1,j)/wspd(i,j)
@@ -5592,11 +5603,15 @@ END SUBROUTINE vertical_diffusion_s_get_flux
        delb          = govrth(i,j)*dthv(i,j)
  
        deltaoh(i,j)  = d1*hpbl(i,j) + d2*wm2(i,j)/delb
-       deltaoh(i,j)  = max(ezfac*deltaoh(i,j),hpbl(i,j)-za(i,kpbl(i,j)-1,j)-1.)
+       deltaoh(i,j)  = max(ezfac*deltaoh(i,j),hpbl(i,j)-za(i,k,j)-1.)
        deltaoh(i,j)  = min(deltaoh(i,j), hpbl(i,j))
  
-       rigs(i,j)     = govrth(i,j)*dthv(i,j)*deltaoh(i,j)/(du**2.+dv**2.)
-       rigs(i,j)     = max(min(rigs(i,j), rigsmax),rimin)
+       if ((du .ne. 0) .or. (dv .ne. 0)) then
+           rigs(i,j) = govrth(i,j)*dthv(i,j)*deltaoh(i,j)/(du**2.+dv**2.)
+           rigs(i,j) = max(min(rigs(i,j), rigsmax),rimin)
+       else
+           rigs(i,j) = rigsmax
+       endif
        enlfrac2(i,j) = max(min(wm3/wstar3(i,j)/(1.+cpent/rigs(i,j)),entfmax),entfmin)
        enlfrac2(i,j) = enlfrac2(i,j)*enlfrac
      ENDIF
@@ -5612,44 +5627,41 @@ END SUBROUTINE vertical_diffusion_s_get_flux
   ENDDO
   ENDDO
   ENDDO
- 
+
   DO j = j_start, j_end
   DO i = i_start, i_end
+     IF (pblflg(i,j)) THEN
          deltaoh(i,j) = deltaoh(i,j)/hpbl(i,j)
-  ENDDO
-  ENDDO
+         delxy = sqrt(dx/msftx(i,j)*dy/msfty(i,j))
+         mlfrac        = mltop-deltaoh(i,j)
+         ezfrac        = mltop+deltaoh(i,j)
+         zfacmf(i,1,j) = min(max((zq(i,2,j)/hpbl(i,j)),zfmin),1.)
+         sfcfracn      = max(sfcfracn1,zfacmf(i,1,j))
+    !
+         sflux0      = (a11+a12*sfcfracn)*sflux(i,j)
+         snlflux0    = nlfrac*sflux0
+         amf1        = snlflux0/sfcfracn
+         amf2        = -snlflux0/(mlfrac-sfcfracn)
+         bmf2        = -mlfrac*amf2
+         amf3        = snlflux0*enlfrac2(i,j)/deltaoh(i,j)
+         bmf3        = -amf3*mlfrac
+         hfxpbl(i,j) = amf3+bmf3
+         pth1        = pthnl(delxy,hpbl(i,j))
+         hfxpbl(i,j) = hfxpbl(i,j)*pth1
 
-  DO j = j_start, j_end
-  DO i = i_start, i_end
-     delxy = sqrt(dx/msftx(i,j)*dy/msfty(i,j))
-     mlfrac        = mltop-deltaoh(i,j)
-     ezfrac        = mltop+deltaoh(i,j)
-     zfacmf(i,1,j) = min(max((zq(i,2,j)/hpbl(i,j)),zfmin),1.)
-     sfcfracn      = max(sfcfracn1,zfacmf(i,1,j))
-!
-     sflux0      = (a11+a12*sfcfracn)*sflux(i,j)
-     snlflux0    = nlfrac*sflux0
-     amf1        = snlflux0/sfcfracn
-     amf2        = -snlflux0/(mlfrac-sfcfracn)
-     bmf2        = -mlfrac*amf2
-     amf3        = snlflux0*enlfrac2(i,j)/deltaoh(i,j)
-     bmf3        = -amf3*mlfrac
-     hfxpbl(i,j) = amf3+bmf3
-     pth1        = pthnl(delxy,hpbl(i,j))
-     hfxpbl(i,j) = hfxpbl(i,j)*pth1
-
-    DO k = kts, ktf
-       zfacmf(i,k,j) = max((zq(i,k+1,j)/hpbl(i,j)),zfmin)
-       IF(pblflg(i,j).and.k.LT.kpbl(i,j)) THEN
-         IF(zfacmf(i,k,j).LE.sfcfracn) THEN
-           nlflux(i,k,j) =  amf1*zfacmf(i,k,j)
-         ELSE IF (zfacmf(i,k,j).LE.mlfrac) THEN
-           nlflux(i,k,j) =  amf2*zfacmf(i,k,j)+bmf2
-         ENDIF
-         nlflux(i,k,j) = nlflux(i,k,j) + hfxpbl(i,j)*exp(-entfacmf(i,k,j)) 
-         nlflux(i,k,j) = nlflux(i,k,j)*pth1
-       ENDIF
-    ENDDO
+        DO k = kts, ktf
+           zfacmf(i,k,j) = max((zq(i,k+1,j)/hpbl(i,j)),zfmin)
+           IF(k.LT.kpbl(i,j)) THEN
+             IF(zfacmf(i,k,j).LE.sfcfracn) THEN
+               nlflux(i,k,j) =  amf1*zfacmf(i,k,j)
+             ELSE IF (zfacmf(i,k,j).LE.mlfrac) THEN
+               nlflux(i,k,j) =  amf2*zfacmf(i,k,j)+bmf2
+             ENDIF
+             nlflux(i,k,j) = nlflux(i,k,j) + hfxpbl(i,j)*exp(-entfacmf(i,k,j))
+             nlflux(i,k,j) = nlflux(i,k,j)*pth1
+           ENDIF
+        ENDDO
+    ENDIF
   ENDDO
   ENDDO
 END SUBROUTINE nonlocal_flux
@@ -5667,10 +5679,15 @@ END SUBROUTINE nonlocal_flux
    REAL,PARAMETER :: b1 = 2.0, b2 = 0.875
    real           :: d,h,doh,num,den
 
-   doh   = d/h
-   num   = a1*(doh)**b1 + a2*(doh)**b2+a3
-   den   = a4*(doh)**b1 + a5*(doh)**b2+a6
-   pthnl = a7*num/den + (1. - a7)
+   if (h .ne. 0) then
+      doh   = d/h
+      num   = a1*(doh)**b1 + a2*(doh)**b2+a3
+      den   = a4*(doh)**b1 + a5*(doh)**b2+a6
+      pthnl = a7*num/den + (1. - a7)
+   else
+      pthnl = 1.
+   endif
+
    pthnl = max(pthnl,pmin)
    pthnl = min(pthnl,pmax)
 
@@ -5691,10 +5708,14 @@ END SUBROUTINE nonlocal_flux
    REAL,PARAMETER :: b1 = 2.0, b2 = 0.5
    REAL           :: d,h,doh,num,den
 
-   doh  = d/h
-   num  = a1*(doh)**b1 + a2*(doh)**b2+a3
-   den  = a4*(doh)**b1 + a5*(doh)**b2+a6
-   pthl = a7*num/den+(1. - a7)
+   if (h .ne. 0) then
+      doh  = d/h
+      num  = a1*(doh)**b1 + a2*(doh)**b2+a3
+      den  = a4*(doh)**b1 + a5*(doh)**b2+a6
+      pthl = a7*num/den+(1. - a7)
+   else
+      pthl = 1.
+   endif
    pthl = max(pthl,pmin)
    pthl = min(pthl,pmax)
 
@@ -5714,10 +5735,14 @@ END SUBROUTINE nonlocal_flux
    REAL,PARAMETER :: b1 = 2.0, b2 = 0.6666667
    REAL           :: d,h,doh,num,den
 
-   doh = d/h
-   num = a1*(doh)**b1 + a2*(doh)**b2
-   den = a3*(doh)**b1 + a4*(doh)**b2+a5
-   pu  = num/den
+   if (h .ne. 0) then
+      doh = d/h
+      num = a1*(doh)**b1 + a2*(doh)**b2
+      den = a3*(doh)**b1 + a4*(doh)**b2+a5
+      pu  = num/den
+   else
+      pu = 1.
+   endif
    pu  = max(pu,pmin)
    pu  = min(pu,pmax)
 
@@ -5908,7 +5933,7 @@ END SUBROUTINE nonlocal_flux
     :: i, j, k, ktf, i_start, i_end, j_start, j_end
 
     REAL, DIMENSION( its-1:ite+1, kts:kte, jts-1:jte+1 )  &
-    :: xkxavg
+    :: xkxavg, rhoavg
 
 ! End declarations.
 !-----------------------------------------------------------------------
@@ -5941,10 +5966,11 @@ END SUBROUTINE nonlocal_flux
     DO j = j_start, j_end
     DO k = kts, ktf
     DO i = i_start, i_end
-      xkxavg(i,k,j) = 0.25 * ( xkx(i-1,k,j  ) + xkx(i,k,j  ) +  &
+      rhoavg(i,k,j) = 0.25 * ( rho(i-1,k,j  ) + rho(i,k,j  ) +  &
+                               rho(i-1,k,j-1) + rho(i,k,j-1) )
+      xkxavg(i,k,j) = rhoavg(i,k,j) *                           &
+                      0.25 * ( xkx(i-1,k,j  ) + xkx(i,k,j  ) +  &
                                xkx(i-1,k,j-1) + xkx(i,k,j-1) )
-      xkxavg(i,k,j) = xkxavg(i,k,j) * .25 * ( rho(i-1,k,j  ) + rho(i,k,j  )  +  &
-                                              rho(i-1,k,j-1) + rho(i,k,j-1) )
     END DO
     END DO
     END DO
@@ -5957,7 +5983,7 @@ END SUBROUTINE nonlocal_flux
       DO k = kts, ktf
       DO i = i_start, i_end
 
-        titau(i,k,j) = rho(i,k,j) * mtau(i,k,j)
+        titau(i,k,j) = rhoavg(i,k,j) * mtau(i,k,j)
 
       END DO
       END DO
@@ -5971,7 +5997,7 @@ END SUBROUTINE nonlocal_flux
         DO k = kts, ktf
         DO i = i_start, i_end
           titau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)
-          mtau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)  / rho(i,k,j)
+          mtau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)  / rhoavg(i,k,j)
 
         END DO
         END DO
@@ -6053,7 +6079,7 @@ END SUBROUTINE nonlocal_flux
     :: i, j, k, ktf, i_start, i_end, j_start, j_end
 
     REAL, DIMENSION( its-1:ite+1, kts:kte, jts-1:jte+1 )  &
-    :: xkxavg
+    :: xkxavg, rhoavg
 
 ! End declarations.
 !-----------------------------------------------------------------------
@@ -6086,10 +6112,11 @@ END SUBROUTINE nonlocal_flux
     DO j = j_start, j_end
     DO k = kts+1, ktf
     DO i = i_start, i_end
-      xkxavg(i,k,j) = 0.5 * ( fnm(k) * ( xkx(i,k  ,j) + xkx(i-1,k  ,j) ) +  &
+      rhoavg(i,k,j) = 0.5 * ( fnm(k) * ( rho(i-1,k  ,j) + rho(i,k  ,j) ) + &
+                              fnp(k) * ( rho(i-1,k-1,j) + rho(i,k-1,j) ) )
+      xkxavg(i,k,j) = rhoavg(i,k,j)  *                                     &
+                      0.5 * ( fnm(k) * ( xkx(i,k  ,j) + xkx(i-1,k  ,j) ) + &
                               fnp(k) * ( xkx(i,k-1,j) + xkx(i-1,k-1,j) ) )
-      xkxavg(i,k,j) = xkxavg(i,k,j) * 0.5 * ( fnm(k) * ( rho(i-1,k  ,j) + rho(i,k  ,j) ) + &
-                                              fnp(k) * ( rho(i-1,k-1,j) + rho(i,k-1,j) ) )
     END DO
     END DO
     END DO
@@ -6099,7 +6126,7 @@ END SUBROUTINE nonlocal_flux
       DO j = j_start, j_end
       DO k = kts+1, ktf
       DO i = i_start, i_end
-         titau(i,k,j) = rho(i,k,j) * mtau(i,k,j)
+         titau(i,k,j) = rhoavg(i,k,j) * mtau(i,k,j)
       ENDDO
       ENDDO
       ENDDO
@@ -6113,7 +6140,7 @@ END SUBROUTINE nonlocal_flux
         DO i = i_start, i_end
 
           titau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)
-          mtau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)  / rho(i,k,j)
+          mtau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)  / rhoavg(i,k,j)
 
         ENDDO
         ENDDO
@@ -6202,7 +6229,7 @@ END SUBROUTINE nonlocal_flux
     :: i, j, k, ktf, i_start, i_end, j_start, j_end
 
     REAL, DIMENSION( its-1:ite+1, kts:kte, jts-1:jte+1 )  &
-    :: xkxavg
+    :: xkxavg, rhoavg
 
 ! End declarations.
 !-----------------------------------------------------------------------
@@ -6235,10 +6262,11 @@ END SUBROUTINE nonlocal_flux
     DO j = j_start, j_end
     DO k = kts+1, ktf
     DO i = i_start, i_end
-      xkxavg(i,k,j) = 0.5 * ( fnm(k) * ( xkx(i,k  ,j) + xkx(i,k  ,j-1) ) +  &
+      rhoavg(i,k,j) = 0.5 * ( fnm(k) * ( rho(i,k  ,j) + rho(i,k  ,j-1) ) + &
+                              fnp(k) * ( rho(i,k-1,j) + rho(i,k-1,j-1) ) )
+      xkxavg(i,k,j) = rhoavg(i,k,j)  *                                     &
+                      0.5 * ( fnm(k) * ( xkx(i,k  ,j) + xkx(i,k  ,j-1) ) + &
                               fnp(k) * ( xkx(i,k-1,j) + xkx(i,k-1,j-1) ) )
-      xkxavg(i,k,j) = xkxavg(i,k,j) * 0.5 * ( fnm(k) * ( rho(i,k  ,j) + rho(i,k  ,j-1) ) +  &
-                                              fnp(k) * ( rho(i,k-1,j) + rho(i,k-1,j-1) ) )
     END DO
     END DO
     END DO
@@ -6249,7 +6277,7 @@ END SUBROUTINE nonlocal_flux
       DO k = kts+1, ktf
       DO i = i_start, i_end
 
-        titau(i,k,j) =  rho(i,k,j) * mtau(i,k,j)
+        titau(i,k,j) =  rhoavg(i,k,j) * mtau(i,k,j)
 
       END DO
       END DO
@@ -6264,7 +6292,7 @@ END SUBROUTINE nonlocal_flux
         DO i = i_start, i_end
 
           titau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)
-          mtau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)  / rho(i,k,j)
+          mtau(i,k,j) = - xkxavg(i,k,j) * defor(i,k,j)  / rhoavg(i,k,j)
 
         END DO
         END DO
@@ -6492,6 +6520,447 @@ SUBROUTINE phy_bc ( config_flags,div,defor11,defor22,defor33,              &
    ENDIF
 !
 END SUBROUTINE phy_bc
+
+!=======================================================================
+!=======================================================================
+
+SUBROUTINE phy_bc_state_pbl3d ( config_flags, u_2, v_2, w_2,     &
+                                t_2, thetav, moist, rho,         &
+                                q_sq_prog, q_sq, l_master,       &
+                                ids, ide, jds, jde, kds, kde,    &
+                                ims, ime, jms, jme, kms, kme,    &
+                                ips, ipe, jps, jpe, kps, kpe,    &
+                                its, ite, jts, jte, kts, kte     )
+
+!------------------------------------------------------------------------------
+! Begin declarations.
+
+   IMPLICIT NONE
+
+   TYPE(grid_config_rec_type), INTENT(IN   ) :: config_flags
+
+   INTEGER ,        INTENT(IN   ) ::        ids, ide, jds, jde, kds, kde, &
+                                            ims, ime, jms, jme, kms, kme, &
+                                            ips, ipe, jps, jpe, kps, kpe, &
+                                            its, ite, jts, jte, kts, kte
+
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: u_2,       &
+                                                                  v_2,       &
+                                                                  w_2,       &
+                                                                  t_2,       &
+                                                                  thetav,    &
+                                                                  moist,     &
+                                                                  rho,       &
+                                                                  q_sq_prog, &
+                                                                  q_sq,      &
+                                                                  l_master
+
+! End declarations.
+!-----------------------------------------------------------------------
+
+   CALL set_physical_bc3d( u_2, 'u', config_flags,                   &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( v_2, 'v', config_flags,                   &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( w_2, 'w', config_flags,                   &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( t_2, 't', config_flags,                   &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( thetav, 't', config_flags,                &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( moist, 't', config_flags,                 &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( rho, 't', config_flags,                   &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( q_sq_prog, 't', config_flags,             &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( q_sq, 'w', config_flags,                  &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( l_master, 'w', config_flags,              &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+
+END SUBROUTINE phy_bc_state_pbl3d
+
+!=======================================================================
+!=======================================================================
+
+SUBROUTINE phy_bc_pbl3d ( config_flags,                            &
+                          turb_flux_u2, turb_flux_v2,              &
+                          turb_flux_w2, turb_flux_uv,              &
+                          turb_flux_uw, turb_flux_vw,              &
+                          turb_flux_utheta, turb_flux_vtheta,      &
+                          turb_flux_wtheta, turb_flux_uqv,         &
+                          turb_flux_vqv, turb_flux_wqv,            &
+                          ids, ide, jds, jde, kds, kde,            &
+                          ims, ime, jms, jme, kms, kme,            &
+                          ips, ipe, jps, jpe, kps, kpe,            &
+                          its, ite, jts, jte, kts, kte             )
+
+!------------------------------------------------------------------------------
+! Begin declarations.
+
+   IMPLICIT NONE
+
+   TYPE(grid_config_rec_type), INTENT(IN   ) :: config_flags
+
+   INTEGER ,        INTENT(IN   ) ::        ids, ide, jds, jde, kds, kde, &
+                                            ims, ime, jms, jme, kms, kme, &
+                                            ips, ipe, jps, jpe, kps, kpe, &
+                                            its, ite, jts, jte, kts, kte
+
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: turb_flux_u2, &
+                                                                  turb_flux_v2, &
+                                                                  turb_flux_w2, &
+                                                                  turb_flux_uv, &
+                                                                  turb_flux_uw, &
+                                                                  turb_flux_vw, &
+                                                              turb_flux_utheta, &
+                                                              turb_flux_vtheta, &
+                                                              turb_flux_wtheta, &
+                                                                 turb_flux_uqv, &
+                                                                 turb_flux_vqv, &
+                                                                 turb_flux_wqv
+
+! End declarations.
+!-----------------------------------------------------------------------
+
+   CALL set_physical_bc3d( turb_flux_u2, 'w', config_flags,          &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_v2, 'w', config_flags,          &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_w2, 'w', config_flags,          &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uv, 'w', config_flags,          &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uw, 'w', config_flags,          &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vw, 'w', config_flags,          &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_utheta, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vtheta, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wtheta, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqv, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqv, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqv, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+END SUBROUTINE phy_bc_pbl3d
+
+!=======================================================================
+!=======================================================================
+
+SUBROUTINE scalar_bc_pbl3d ( config_flags,                                &
+                             turb_flux_uqc, turb_flux_vqc, turb_flux_wqc, &
+                             turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, &
+                             turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, &
+                             turb_flux_uqs, turb_flux_vqs, turb_flux_wqs, &
+                             turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, &
+                             turb_flux_uqnc, turb_flux_vqnc, turb_flux_wqnc,  &
+                             turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr,  &
+                             turb_flux_uqni, turb_flux_vqni, turb_flux_wqni,  &
+                             turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, &
+                             turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
+                             ids, ide, jds, jde, kds, kde,                &
+                             ims, ime, jms, jme, kms, kme,                &
+                             ips, ipe, jps, jpe, kps, kpe,                &
+                             its, ite, jts, jte, kts, kte                 )
+
+!------------------------------------------------------------------------------
+! Begin declarations.
+
+   IMPLICIT NONE
+
+   TYPE(grid_config_rec_type), INTENT(IN   ) :: config_flags
+
+   INTEGER ,        INTENT(IN   ) ::        ids, ide, jds, jde, kds, kde, &
+                                            ims, ime, jms, jme, kms, kme, &
+                                            ips, ipe, jps, jpe, kps, kpe, &
+                                            its, ite, jts, jte, kts, kte
+
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: turb_flux_uqc, &
+      turb_flux_vqc, turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, &
+      turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, turb_flux_uqs, turb_flux_vqs, &
+      turb_flux_wqs, turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, &
+      turb_flux_vqnc, turb_flux_wqnc, turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, &
+      turb_flux_uqni, turb_flux_vqni, turb_flux_wqni, turb_flux_uqnwfa, turb_flux_vqnwfa, &
+      turb_flux_wqnwfa, turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa
+
+! End declarations.
+!-----------------------------------------------------------------------
+
+   CALL set_physical_bc3d( turb_flux_uqc, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqc, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqc, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqr, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqr, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqr, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqi, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqi, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqi, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqs, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqs, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqs, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqg, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqg, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqg, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnc, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnc, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnc, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnr, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnr, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnr, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqni, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqni, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqni, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnwfa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnwfa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnwfa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnifa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnifa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnifa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+END SUBROUTINE scalar_bc_pbl3d
 
 !=======================================================================
 !=======================================================================
@@ -8147,7 +8616,7 @@ END SUBROUTINE phy_bc
    INTEGER :: i_start, i_end, j_start, j_end
  
    REAL :: V0_u,V0_v,ustar,beta
-   REAL :: heat_flux, moist_flux
+   REAL :: heat_flux, moist_flux, qfac
    REAL :: cpm,rdz_w,rhoavg_u,rhoavg_v,rdz_z
 ! End declarations.
 !-----------------------------------------------------------------------
@@ -8499,13 +8968,7 @@ END SUBROUTINE phy_bc
     ENDDO
  
   CASE (1) ! use surface heat flux computed from surface routine
-    DO j = j_start, j_end
-    DO i = i_start, i_end
-       cpm = cp * (1. + 0.8 * moist(i,kts,j,P_QV))
-       heat_flux = hfx(i,j)/cpm/rho(i,1,j)
-    ENDDO
-    ENDDO
- 
+    ! do nothing
   CASE DEFAULT
     CALL wrf_error_fatal( 'isfflx value invalid for diff_opt=2' )
   END SELECT hflux
@@ -8524,17 +8987,23 @@ END SUBROUTINE phy_bc
                   - dt*rdz_w*nlflux_rho(i,k+1,j)        &
                   + dt*rdz_w*hfx(i,j)/cpm
           ELSE
+             qfac = 1.+rvovrd*moist(i,kts,j,P_QV)
              d(k) = var_mix(i,kts,j)                    &
-                  - dt*rdz_w*nlflux_rho(i,k+1,j)        &
-                  + dt*rdz_w*(hfx(i,j)/cpm+1.61*theta(i,kts,j)*qfx(i,j))
+                  - dt*rdz_w*nlflux_rho(i,k+1,j)*qfac   &
+                  + dt*rdz_w*(qfac*hfx(i,j)/cpm+1.61*theta(i,kts,j)*qfx(i,j))
           ENDIF
  
+          IF(config_flags%use_theta_m == 1)THEN
+              qfac = 1.+rvovrd*moist(i,kts,j,P_QV)
+          ELSE
+              qfac = 1.
+          ENDIF
           DO  k = kts+1, ktf-1
             rdz_w = -g/dnw(k)/(c1h(k)*mu(i,j) + c2h(k))
             a(k)  = -rdz_w*rdz(i,k,j)*xkxavg(i,k,j)*dt
             b(k)  = 1.+rdz_w*(rdz(i,k+1,j)*xkxavg(i,k+1,j)+rdz(i,k,j)*xkxavg(i,k,j))*dt
             c(k)  = -rdz_w*rdz(i,k+1,j)*xkxavg(i,k+1,j)*dt
-            d(k)  = -rdz_w*(nlflux_rho(i,k+1,j)-nlflux_rho(i,k,j))*dt + var_mix(i,k,j)
+            d(k)  = -rdz_w*(nlflux_rho(i,k+1,j)-nlflux_rho(i,k,j))*qfac*dt + var_mix(i,k,j)
           ENDDO
  
             a(ktf) = 0.
@@ -8576,15 +9045,21 @@ END SUBROUTINE phy_bc
     DO  i = i_start, i_end
         DO  k = kts, ktf-1
            rdz_w = - g/dnw(k)/(c1h(k)*mu(i,j)+c2h(k))
-           beta  =   1.5*sqrt(tke(i,k,j))/l_diss(i,k,j)
+           IF (l_diss(i,k,j) .ne. 0) THEN
+               beta  =   1.5*sqrt(tke(i,k,j))/l_diss(i,k,j)
+           ELSE
+               beta  =   0.
+           ENDIF
            a(k)  = - 2.0*xkxavg(i,k,j)*dt*rdz_w*rdz(i,k,j)
            b(k)  =   1.0 + 2.0*dt*rdz_w*(rdz(i,k,j)*xkxavg(i,k,j)    &
                    + rdz(i,k+1,j)*xkxavg(i,k+1,j))                   &
                    + dt*beta
            c(k)  = - 2.0*xkxavg(i,k+1,j)*dt*rdz(i,k+1,j)*rdz_w
  
-           d(k)  =   tke(i,k,j)                                  &
-                   + 0.5*dt*tke(i,k,j)**1.5/l_diss(i,k,j)
+           d(k)  =   tke(i,k,j)
+           IF (l_diss(i,k,j) .ne. 0) THEN
+               d(k) = d(k) + 0.5*dt*tke(i,k,j)**1.5/l_diss(i,k,j)
+           ENDIF
         ENDDO
  
            a(ktf) = 0. !-1 

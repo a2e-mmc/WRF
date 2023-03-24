@@ -78,7 +78,8 @@ SUBROUTINE wrf_tsin ( grid , ierr )
                        grid%desctsloc(grid%ntsloc+1), grid%nametsloc(grid%ntsloc+1), &
                        grid%itsloc(grid%ntsloc+1), grid%jtsloc(grid%ntsloc+1)
                    ELSE
-                       READ(UNIT=iunit, FMT='(A25,1X,A5,1X,F7.3,1X,F8.3)', IOSTAT=istatus)            &
+                       !READ(UNIT=iunit, FMT='(A25,1X,A5,1X,F7.3,1X,F8.3)', IOSTAT=istatus)            &
+                       READ(UNIT=iunit, FMT='(A25,1X,A5,1X,F9.6,1X,F10.6)', IOSTAT=istatus)            &
                        grid%desctsloc(grid%ntsloc+1), grid%nametsloc(grid%ntsloc+1), &
                        grid%lattsloc(grid%ntsloc+1), grid%lontsloc(grid%ntsloc+1)
                    END IF

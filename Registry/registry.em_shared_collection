@@ -30,7 +30,9 @@ include registry.trad_fields
 include registry.solar_fields
 include registry.cell_pert
 include registry.mom_pert
-include registry.scpm_jdm
+include registry.les_cpm
 include registry.slices
 include registry.column_out
 include registry.tsout
+include registry.windturb
+include registry.add_synth_turb_mmc

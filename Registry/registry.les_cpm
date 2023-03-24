@@ -1,0 +1,31 @@
+#
+# Registry for parameters used by the Cell Perturbation Method (CPM)
+#
+
+state    real     cpm_3d     ikj  misc  1  -  rh    "cpm_3d"     "Instantaneous value of applied perturbations. Only used to check output."           "K or m/s"
+state    real     prttms     k    misc  1  -  r     "prttms"     "Accumulated time since last perturbations were applied."                            "s"
+state    real     prtdt      k    misc  1  -  r     "prtdt"      "Time interval to reapply perturbations."                                            "s"
+state    integer  prtseed    k    misc  1  -  r     "prtseed"    "Seed from random number generator. Ensures correct values on all processors."       ""
+state    real     meso_pblh  ij   misc  1  -  rhdf  "meso_pblh"  "PBL Height from mesoscale PBL scheme passed down to CPM module."                    "m"
+state    real     meso_hfx   ij   misc  1  -  rhdf  "meso_hfx"   "Sensible heat flux from mesoscale surface layer scheme passed down to CPM module."  "K m/s"
+
+rconfig	 integer  cpm_opt         namelist,dynamics  max_domains  0      -  "1 to use CPM; 0 = no perturbations."
+rconfig	 integer  cpm_meso_pblh   namelist,dynamics  max_domains  0      -  "1 to calculate and use mesoscale pblh for CPM."
+rconfig	 real     cpm_pblh_check  namelist,dynamics  max_domains  300.0  -  "Time in seconds to check if PBL height has changed."
+rconfig	 integer  cpm_meso_hfx    namelist,dynamics  max_domains  0      -  "Whether to use surface sensible heat flux from a mesoscale scheme (1) or not (0)."
+rconfig  real     cpm_lim_z       namelist,dynamics  max_domains  0.0    -  "Maximum height to apply perturbations if not using cpm_meso_pblh; Otherwise minimum height."
+rconfig  real     cpm_amp         namelist,dynamics  max_domains  0.0    -  "Target amplitude window for perturbations."
+rconfig  real     cpm_pec         namelist,dynamics  max_domains  0.2    -  "Value of perturbation Eckert number used in neutral CPM formulation."
+rconfig  real     cpm_rim         namelist,dynamics  max_domains  -1.0   -  "Value of modified Richardson number used in stable CPM formulation."
+rconfig  real     cpm_dt          namelist,dynamics  max_domains  0.0    -  "Time to reapply perturbations of nonzero; otherwise use height-dependent advective timescale."
+rconfig  real     cpm_lambda      namelist,dynamics  max_domains  0.5    -  "Factor to account for spec_bdy_width in advective refresh timescale calculation."
+rconfig  integer  cpm_nb          namelist,dynamics  max_domains  0      -  "Set cpm_*b = 1 to apply perturbations to specified lateral boundary independently."
+rconfig  integer  cpm_sb          namelist,dynamics  max_domains  0      -  "... 1 applies perturbations to a boundary, 0 does not."
+rconfig  integer  cpm_eb          namelist,dynamics  max_domains  0      -  "... If cpm_*b all = 0, boundary(ies) to perturb are based on the mean wind direction along"
+rconfig  integer  cpm_wb          namelist,dynamics  max_domains  0      -  "... all four lateral edges of the domain at a height of 1.2*(meso_pblh or cpm_lim_z)." 
+
+rconfig  integer  cpm_ngc_h       namelist,dynamics  max_domains  8      -  "Number of grid points per cell in the horizontal (x = y) directions."
+rconfig  integer  cpm_ncells_h    namelist,dynamics  max_domains  3      -  "Number of cells in the horizontal (x = y) directions"
+rconfig  integer  cpm_noff_h      namelist,dynamics  max_domains  0      -  "Number of cells from any outflow boundary to end the perturbations."
+rconfig  integer  cpm_ngc_v       namelist,dynamics  max_domains  1      -  "Number of grid points per cell in the z direction."
+rconfig  integer  cpm_noff_v      namelist,dynamics  max_domains  0      -  "Number of grid points from the domain bottom to start the perturbations."

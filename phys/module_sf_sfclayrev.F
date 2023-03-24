@@ -16,7 +16,7 @@ CONTAINS
                      ZNT,UST,PBLH,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH, &
                      FM,FH,                                        &
                      XLAND,HFX,QFX,LH,TSK,FLHC,FLQC,QGH,QSFC,RMOL, &
-                     U10,V10,TH2,T2,Q2,                            &
+                     U10,V10,U4,V4,TH2,T2,Q2,                      &
                      GZ1OZ0,WSPD,BR,ISFFLX,DX,                     &
                      SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                      KARMAN,EOMEG,STBOLT,                          &
@@ -25,9 +25,8 @@ CONTAINS
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
                      ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
-                     use_bathymetry,water_depth,                   & ! PSH
+                     shalwater_z0,water_depth,shalwater_depth,  & 
                      scm_force_flux                                )
-     
 !-------------------------------------------------------------------
       IMPLICIT NONE
 !-------------------------------------------------------------------
@@ -145,6 +144,8 @@ CONTAINS
       REAL,     DIMENSION( ims:ime, jms:jme )                    , &
                 INTENT(OUT  )               ::                U10, &
                                                               V10, &
+                                                               U4, & 
+                                                               V4, & 
                                                               TH2, &
                                                                T2, &
                                                                Q2, &
@@ -197,8 +198,9 @@ CONTAINS
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX, IZ0TLND
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     SCM_FORCE_FLUX
 
-      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
-      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN)  :: water_depth ! PSH
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     shalwater_z0 
+      REAL,     OPTIONAL,  INTENT(IN )   ::     shalwater_depth 
+      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN)  :: water_depth 
 ! LOCAL VARS
 
       REAL,     DIMENSION( its:ite ) ::                       U1D, &
@@ -234,13 +236,14 @@ CONTAINS
                 MOL(ims,j),REGIME(ims,j),PSIM(ims,j),PSIH(ims,j),  &
                 FM(ims,j),FH(ims,j),                               &
                 XLAND(ims,j),HFX(ims,j),QFX(ims,j),TSK(ims,j),     &
-                U10(ims,j),V10(ims,j),TH2(ims,j),T2(ims,j),        &
+                U10(ims,j),V10(ims,j),U4(ims,j),V4(ims,j),         & 
+                TH2(ims,j),T2(ims,j),                              &
                 Q2(ims,j),FLHC(ims,j),FLQC(ims,j),QGH(ims,j),      &
                 QSFC(ims,j),LH(ims,j),                             &
                 GZ1OZ0(ims,j),WSPD(ims,j),BR(ims,j),ISFFLX,DX,     &
                 SVP1,SVP2,SVP3,SVPT0,EP1,EP2,KARMAN,EOMEG,STBOLT,  &
                 P1000mb,                                           &
-                use_bathymetry,water_depth(ims,j),                 & ! PSH
+                shalwater_z0,water_depth(ims,j),shalwater_depth,& 
                 ids,ide, jds,jde, kds,kde,                         &
                 ims,ime, jms,jme, kms,kme,                         &
                 its,ite, jts,jte, kts,kte                          &
@@ -260,12 +263,12 @@ CONTAINS
                      CP,G,ROVCP,R,XLV,PSFCPA,CHS,CHS2,CQS2,CPM,PBLH,RMOL, &
                      ZNT,UST,MAVAIL,ZOL,MOL,REGIME,PSIM,PSIH,FM,FH,&
                      XLAND,HFX,QFX,TSK,                            &
-                     U10,V10,TH2,T2,Q2,FLHC,FLQC,QGH,              &
+                     U10,V10,U4,V4,TH2,T2,Q2,FLHC,FLQC,QGH,        & 
                      QSFC,LH,GZ1OZ0,WSPD,BR,ISFFLX,DX,             &
                      SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                      KARMAN,EOMEG,STBOLT,                          &
                      P1000mb,                                      &
-                     use_bathymetry,water_depth,                   & ! PSH
+                     shalwater_z0,water_depth,shalwater_depth,  & 
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
@@ -325,13 +328,14 @@ CONTAINS
                                                               QGH
 
       REAL,     DIMENSION( ims:ime )                             , &
-                INTENT(OUT)     ::                        U10,V10, &
+                INTENT(OUT)     ::                  U10,V10,U4,V4, & 
                                                 TH2,T2,Q2,QSFC,LH
 
       REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
 
-      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
-      REAL, OPTIONAL, DIMENSION( ims:ime ), INTENT(IN)  :: water_depth ! PSH
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     shalwater_z0 
+      REAL,     OPTIONAL,  INTENT(IN )   ::     shalwater_depth 
+      REAL, OPTIONAL, DIMENSION( ims:ime ), INTENT(IN)  :: water_depth 
 ! MODULE-LOCAL VARIABLES, DEFINED IN SUBROUTINE SFCLAY
       REAL,     DIMENSION( its:ite ),  INTENT(IN   )   ::  dz8w1d
 
@@ -357,6 +361,8 @@ CONTAINS
                                                            THX,QX, &
                                                             PSIH2, &
                                                             PSIM2, &
+                                                            PSIH4, & 
+                                                            PSIM4, & 
                                                            PSIH10, &
                                                            PSIM10, &
                                                            DENOMQ, &
@@ -364,6 +370,7 @@ CONTAINS
                                                           DENOMT2, &
                                                             WSPDI, &
                                                            GZ2OZ0, &
+                                                           GZ4OZ0, & 
                                                            GZ10OZ0
 !
       REAL,     DIMENSION( its:ite )        ::                     &
@@ -378,15 +385,15 @@ CONTAINS
       INTEGER ::  N,I,K,KK,L,NZOL,NK,NZOL2,NZOL10
 
       REAL    ::  PL,THCON,TVCON,E1
-      REAL    ::  ZL,TSKV,DTHVDZ,DTHVM,VCONV,RZOL,RZOL2,RZOL10,ZOL2,ZOL10
-      REAL    ::  DTG,PSIX,DTTHX,PSIX10,PSIT,PSIT2,PSIQ,PSIQ2,PSIQ10
+      REAL    ::  ZL,TSKV,DTHVDZ,DTHVM,VCONV,RZOL,RZOL2,RZOL10,ZOL2,ZOL4,ZOL10 
+      REAL    ::  DTG,PSIX,DTTHX,PSIX10,PSIX4,PSIT,PSIT2,PSIQ,PSIQ2,PSIQ10 
       REAL    ::  FLUXC,VSGD,Z0Q,VISC,RESTAR,CZIL,GZ0OZQ,GZ0OZT
       REAL    ::  ZW, ZN1, ZN2
 !
 ! .... paj ...
 !
       REAL    :: zolzz,zol0
-      REAL    :: depth,depth_b ! PSH
+      REAL    :: depth,depth_b 
 !     REAL    :: zolri,zolri2
 !     REAL    :: psih_stable,psim_stable,psih_unstable,psim_unstable
 !     REAL    :: psih_stable_full,psim_stable_full,psih_unstable_full,psim_unstable_full
@@ -503,6 +510,7 @@ CONTAINS
       DO 260 I=its,ite
         GZ1OZ0(I)=ALOG((ZA(I)+ZNT(I))/ZNT(I))   ! log((z+z0)/z0)                                     
         GZ2OZ0(I)=ALOG((2.+ZNT(I))/ZNT(I))      ! log((2+z0)/z0)                           
+        GZ4OZ0(I)=ALOG((4.+ZNT(I))/ZNT(I))      ! log((2+z0)/z0)                           
         GZ10OZ0(I)=ALOG((10.+ZNT(I))/ZNT(I))    ! log((10+z0)z0)                    
         IF((XLAND(I)-1.5).GE.0)THEN                                            
           ZL=ZNT(I)                                                            
@@ -592,6 +600,7 @@ CONTAINS
 !
         zolzz=zol(I)*(za(I)+znt(I))/za(I) ! (z+z0/L
         zol10=zol(I)*(10.+znt(I))/za(I)   ! (10+z0)/L
+        zol4=zol(I)*(4.+znt(I))/za(I)     ! (4+z0)/L 
         zol2=zol(I)*(2.+znt(I))/za(I)     ! (2+z0)/L
         zol0=zol(I)*znt(I)/za(I)          ! z0/L
         ZL2=(2.)/ZA(I)*ZOL(I)             ! 2/L      
@@ -621,6 +630,8 @@ CONTAINS
         psim2(I)=psim_stable(zol2)-psim_stable(zol0)
         psih2(I)=psih_stable(zol2)-psih_stable(zol0)
 !
+        psim4(I)=psim_stable(zol4)-psim_stable(zol0)  
+        psih4(I)=psih_stable(zol4)-psih_stable(zol0)  
 ! ... paj: preparations to compute PSIQ. Follows CB05+Carlson Boland JAM 1978.
 !
         pq(I)=psih_stable(zol(I))-psih_stable(zl)
@@ -642,6 +653,8 @@ CONTAINS
         PSIH10(I)=PSIM10(I)                                           
         PSIM2(I)=0.                                                  
         PSIH2(I)=PSIM2(I)                                           
+        PSIM4(I)=0.                                                  
+        PSIH4(I)=PSIM4(I)                                           
 !
 ! paj: preparations to compute PSIQ.
 !
@@ -670,6 +683,8 @@ CONTAINS
         psim2(I)=psim_unstable(zol2)-psim_unstable(zol0)
         psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
 !
+        psim4(I)=psim_unstable(zol4)-psim_unstable(zol0)  
+        psih4(I)=psih_unstable(zol4)-psih_unstable(zol0)  
 ! ... paj: preparations to compute PSIQ 
 !
         pq(I)=psih_unstable(zol(I))-psih_unstable(zl)
@@ -681,10 +696,12 @@ CONTAINS
         PSIH(I)=AMIN1(PSIH(I),0.9*GZ1OZ0(I))
         PSIM(I)=AMIN1(PSIM(I),0.9*GZ1OZ0(I))
         PSIH2(I)=AMIN1(PSIH2(I),0.9*GZ2OZ0(I))
+        PSIH4(I)=AMIN1(PSIH4(I),0.9*GZ4OZ0(I)) 
         PSIM10(I)=AMIN1(PSIM10(I),0.9*GZ10OZ0(I))
 !
 ! AHW: mods to compute ck, cd
         PSIH10(I)=AMIN1(PSIH10(I),0.9*GZ10OZ0(I))
+        PSIH4(I)=AMIN1(PSIH4(I),0.9*GZ4OZ0(I)) 
 
         RMOL(I) = ZOL(I)/ZA(I)  
 
@@ -696,6 +713,7 @@ CONTAINS
       DO 330 I=its,ite
         DTG=THX(I)-THGB(I)                                                   
         PSIX=GZ1OZ0(I)-PSIM(I)                                                   
+        PSIX4=GZ4OZ0(I)-PSIM4(I) 
         PSIX10=GZ10OZ0(I)-PSIM10(I)
 
 !     LOWER LIMIT ADDED TO PREVENT LARGE FLHC IN SOIL MODEL
@@ -730,20 +748,24 @@ CONTAINS
            zolzz=zol(I)*(za(I)+z0t)/za(I)    ! (z+z0t)/L
            zol10=zol(I)*(10.+z0t)/za(I)   ! (10+z0t)/L
            zol2=zol(I)*(2.+z0t)/za(I)     ! (2+z0t)/L
+           zol4=zol(I)*(4.+z0t)/za(I)     ! (4+z0t)/L 
            zol0=zol(I)*z0t/za(I)          ! z0t/L
 !
               if (zol(I).gt.0.) then
               psih(I)=psih_stable(zolzz)-psih_stable(zol0)
               psih10(I)=psih_stable(zol10)-psih_stable(zol0)
+              psih4(I)=psih_stable(zol4)-psih_stable(zol0) 
               psih2(I)=psih_stable(zol2)-psih_stable(zol0)
               else
                 if (zol(I).eq.0) then
                 psih(I)=0.
                 psih10(I)=0.
+                psih4(I)=0. 
                 psih2(I)=0.
                 else
                 psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
                 psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
+                psih4(I)=psih_unstable(zol4)-psih_unstable(zol0) 
                 psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
                 endif
               endif
@@ -752,21 +774,25 @@ CONTAINS
 
            zolzz=zol(I)*(za(I)+z0q)/za(I)    ! (z+z0q)/L
            zol10=zol(I)*(10.+z0q)/za(I)   ! (10+z0q)/L
+           zol4=zol(I)*(4.+z0q)/za(I)     ! (4+z0q)/L 
            zol2=zol(I)*(2.+z0q)/za(I)     ! (2+z0q)/L
            zol0=zol(I)*z0q/za(I)          ! z0q/L
 !
               if (zol(I).gt.0.) then
               psih(I)=psih_stable(zolzz)-psih_stable(zol0)
               psih10(I)=psih_stable(zol10)-psih_stable(zol0)
+              psih4(I)=psih_stable(zol4)-psih_stable(zol0) 
               psih2(I)=psih_stable(zol2)-psih_stable(zol0)
               else
                 if (zol(I).eq.0) then
                 psih(I)=0.
                 psih10(I)=0.
+                psih4(I)=0. 
                 psih2(I)=0.
                 else
                 psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
                 psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
+                psih4(I)=psih_unstable(zol4)-psih_unstable(zol0) 
                 psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
                 endif
               endif
@@ -789,21 +815,25 @@ CONTAINS
 !
            zolzz=zol(I)*(za(I)+z0q)/za(I)    ! (z+z0q)/L
            zol10=zol(I)*(10.+z0q)/za(I)   ! (10+z0q)/L
+           zol4=zol(I)*(4.+z0q)/za(I)     ! (4+z0q)/L 
            zol2=zol(I)*(2.+z0q)/za(I)     ! (2+z0q)/L
            zol0=zol(I)*z0q/za(I)          ! z0q/L
 !
               if (zol(I).gt.0.) then
               psih(I)=psih_stable(zolzz)-psih_stable(zol0)
               psih10(I)=psih_stable(zol10)-psih_stable(zol0)
+              psih4(I)=psih_stable(zol4)-psih_stable(zol0) 
               psih2(I)=psih_stable(zol2)-psih_stable(zol0)
               else
                 if (zol(I).eq.0) then
                 psih(I)=0.
                 psih10(I)=0.
+                psih4(I)=0. 
                 psih2(I)=0.
                 else
                 psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
                 psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
+                psih4(I)=psih_unstable(zol4)-psih_unstable(zol0) 
                 psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
                 endif
               endif
@@ -831,21 +861,25 @@ CONTAINS
 !
            zolzz=zol(I)*(za(I)+z0t)/za(I)    ! (z+z0t)/L
            zol10=zol(I)*(10.+z0t)/za(I)   ! (10+z0t)/L
+           zol4=zol(I)*(4.+z0t)/za(I)     ! (4+z0t)/L 
            zol2=zol(I)*(2.+z0t)/za(I)     ! (2+z0t)/L
            zol0=zol(I)*z0t/za(I)          ! z0t/L
 !
               if (zol(I).gt.0.) then
               psih(I)=psih_stable(zolzz)-psih_stable(zol0)
               psih10(I)=psih_stable(zol10)-psih_stable(zol0)
+              psih4(I)=psih_stable(zol4)-psih_stable(zol0) 
               psih2(I)=psih_stable(zol2)-psih_stable(zol0)
               else
                 if (zol(I).eq.0) then
                 psih(I)=0.
                 psih10(I)=0.
+                psih4(I)=0. 
                 psih2(I)=0.
                 else
                 psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
                 psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
+                psih4(I)=psih_unstable(zol4)-psih_unstable(zol0) 
                 psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
                 endif
               endif
@@ -860,21 +894,25 @@ CONTAINS
 !
            zolzz=zol(I)*(za(I)+z0q)/za(I)    ! (z+z0q)/L
            zol10=zol(I)*(10.+z0q)/za(I)   ! (10+z0q)/L
+           zol4=zol(I)*(4.+z0q)/za(I)     ! (4+z0q)/L 
            zol2=zol(I)*(2.+z0q)/za(I)     ! (2+z0q)/L
            zol0=zol(I)*z0q/za(I)          ! z0q/L
 !
               if (zol(I).gt.0.) then
               psih(I)=psih_stable(zolzz)-psih_stable(zol0)
               psih10(I)=psih_stable(zol10)-psih_stable(zol0)
+              psih4(I)=psih_stable(zol4)-psih_stable(zol0) 
               psih2(I)=psih_stable(zol2)-psih_stable(zol0)
               else
                 if (zol(I).eq.0) then
                 psih(I)=0.
                 psih10(I)=0.
+                psih4(I)=0. 
                 psih2(I)=0.
                 else
                 psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
                 psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
+                psih4(I)=psih_unstable(zol4)-psih_unstable(zol0) 
                 psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
                 endif
               endif
@@ -914,21 +952,25 @@ CONTAINS
 !
            zolzz=zol(I)*(za(I)+z0t)/za(I)    ! (z+z0t)/L
            zol10=zol(I)*(10.+z0t)/za(I)   ! (10+z0t)/L
+           zol4=zol(I)*(4.+z0t)/za(I)     ! (4+z0t)/L 
            zol2=zol(I)*(2.+z0t)/za(I)     ! (2+z0t)/L
            zol0=zol(I)*z0t/za(I)          ! z0t/L
 !
               if (zol(I).gt.0.) then
               psih(I)=psih_stable(zolzz)-psih_stable(zol0)
               psih10(I)=psih_stable(zol10)-psih_stable(zol0)
+              psih4(I)=psih_stable(zol4)-psih_stable(zol0) 
               psih2(I)=psih_stable(zol2)-psih_stable(zol0)
               else
                 if (zol(I).eq.0) then
                 psih(I)=0.
                 psih10(I)=0.
+                psih4(I)=0. 
                 psih2(I)=0.
                 else
                 psih(I)=psih_unstable(zolzz)-psih_unstable(zol0)
                 psih10(I)=psih_unstable(zol10)-psih_unstable(zol0)
+                psih4(I)=psih_unstable(zol4)-psih_unstable(zol0) 
                 psih2(I)=psih_unstable(zol2)-psih_unstable(zol0)
                 endif
               endif
@@ -957,6 +999,8 @@ CONTAINS
 
         U10(I)=UX(I)*PSIX10/PSIX                                    
         V10(I)=VX(I)*PSIX10/PSIX                                   
+        U4(I)=UX(I)*PSIX4/PSIX                                     
+        V4(I)=VX(I)*PSIX4/PSIX                                    
         TH2(I)=THGB(I)+DTG*PSIT2/PSIT                                
         Q2(I)=QSFC(I)+(QX(I)-QSFC(I))*PSIQ2/PSIQ                   
         T2(I) = TH2(I)*(PSFCPA(I)/P1000mb)**ROVCP                     
@@ -991,15 +1035,15 @@ CONTAINS
       DO 360 I=its,ite
         IF((XLAND(I)-1.5).GE.0)THEN                                            
 !         ZNT(I)=CZO*UST(I)*UST(I)/G+OZO                                   
-! PSH - formulation for depth-dependent roughness from
-! ... Jimenez and Dudhia, 2018
-          IF ( use_bathymetry .eq. 1 ) THEN
-             ZNT(I) = depth_dependent_z0(water_depth(I),ZNT(I),UST(I))  
+          ! PSH - formulation for depth-dependent roughness from
+          ! ... Jimenez and Dudhia, 2018
+          IF ( shalwater_z0 .eq. 1 ) THEN
+             ZNT(I) = depth_dependent_z0(water_depth(I),ZNT(I),UST(I))
           ELSE
-! Since V3.7 (ref: EC Physics document for Cy36r1)
-              ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
-! V3.9: Add limit as in isftcflx = 1,2
-              ZNT(I)=MIN(ZNT(I),2.85e-3)
+             ! Since V3.7 (ref: EC Physics document for Cy36r1)
+             ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
+             ! V3.9: Add limit as in isftcflx = 1,2
+             ZNT(I)=MIN(ZNT(I),2.85e-3)
           ENDIF
 ! COARE 3.5 (Edson et al. 2013)
 !         CZC = 0.0017*WSPD(I)-0.005
@@ -1115,10 +1159,24 @@ CONTAINS
    END SUBROUTINE SFCLAYREV1D
 
 !====================================================================
-   SUBROUTINE sfclayrevinit
+   SUBROUTINE sfclayrevinit(ims,ime,jms,jme,                    &
+                            its,ite,jts,jte,                    &
+                            bathymetry_flag, shalwater_z0,   &
+                            shalwater_depth, water_depth,       &
+                            xland,LakeModel,lake_depth,lakemask )
 
     INTEGER                   ::      N
     REAL                      ::      zolf
+
+   INTEGER, INTENT(IN)      ::   ims,ime,jms,jme,its,ite,jts,jte
+   INTEGER, INTENT(IN)      ::   shalwater_z0 
+   REAL,    INTENT(IN)      ::   shalwater_depth 
+   INTEGER, INTENT(IN)      ::   bathymetry_flag 
+   REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)    ::  water_depth
+   REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(IN   )    ::  xland 
+   INTEGER         ::     LakeModel
+   REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(IN   )    ::  lake_depth
+   REAL,    DIMENSION( ims:ime, jms:jme )                   ::  lakemask  
 
     DO N=0,1000
 ! stable function tables
@@ -1132,8 +1190,73 @@ CONTAINS
        psih_unstab(n)=psih_unstable_full(zolf)
 
     ENDDO
+    IF ( shalwater_z0 .EQ. 1 ) THEN
+       CALL shalwater_init(ims,ime,jms,jme,            &
+                 its,ite,jts,jte,                      &
+                 bathymetry_flag, shalwater_z0,     &
+                 shalwater_depth, water_depth,         &
+                 xland,LakeModel,lake_depth,lakemask   )
+    END IF
 
    END SUBROUTINE sfclayrevinit
+
+   SUBROUTINE shalwater_init(ims,ime,jms,jme,                    &
+                             its,ite,jts,jte,                    &
+                             bathymetry_flag, shalwater_z0,   &
+                             shalwater_depth, water_depth,       &
+                             xland,LakeModel,lake_depth,lakemask )
+
+   INTEGER, INTENT(IN)      ::   ims,ime,jms,jme,its,ite,jts,jte
+   INTEGER, INTENT(IN)      ::   shalwater_z0 
+   REAL,    INTENT(IN)      ::   shalwater_depth 
+   INTEGER, INTENT(IN)      ::   bathymetry_flag 
+   REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)    ::  water_depth
+   REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(IN   )    ::  xland 
+   INTEGER         ::     LakeModel
+   REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(IN   )    ::  lake_depth
+   REAL,    DIMENSION( ims:ime, jms:jme )                   ::  lakemask  
+
+   ! Local 
+   LOGICAL :: overwrite_water_depth
+
+   overwrite_water_depth = .False.
+
+   IF ( bathymetry_flag .eq. 1 ) THEN
+      IF ( shalwater_depth .LE. 0.0 ) THEN
+         CALL wrf_message ( " Bathymetry dataset from GEBCO Compilation Group. Please acknowledge the following in presentations and publications: GEBCO Compilation Group (2021) GEBCO 2021 Grid (doi:10     .5285/c6612cbe-50b3-0cff-e053-6c86abc09f8f)." )
+         IF ( LakeModel .ge. 1 ) THEN
+            DO j = jts,jte
+               DO i = its,ite
+                  IF ( lakemask(i,j) .EQ. 1 ) THEN
+                     water_depth(i,j) = lake_depth(i,j)
+                  END IF
+               END DO
+            END DO
+         END IF
+      ELSE
+         overwrite_water_depth = .True.
+      END IF
+   ELSE
+      IF ( shalwater_depth .GT. 0.0 ) THEN
+         overwrite_water_depth = .True.
+      ELSE
+         CALL wrf_error_fatal('No bathymetry data detected and shalwater_depth not greater than 0.0. Re-run WPS to get bathymetry data or set shalwater_depth > 0.0')
+      END IF
+   END IF
+
+   IF (overwrite_water_depth) THEN 
+      DO j = jts,jte
+         DO i = its,ite
+            IF((XLAND(i,j)-1.5).GE.0)THEN
+               water_depth(i,j) = shalwater_depth
+            ELSE
+               water_depth(i,j) = -2.0 
+            END IF
+         END DO
+      END DO
+   END IF
+
+   END SUBROUTINE shalwater_init
 
       function zolri(ri,z,z0)
 !
@@ -1231,7 +1354,7 @@ CONTAINS
       real    :: rzol
         nzol = int(zolf*100.)
         rzol = zolf*100. - nzol
-        if(nzol+1 .le. 1000)then
+        if(nzol+1 .lt. 1000)then
            psim_stable = psim_stab(nzol) + rzol*(psim_stab(nzol+1)-psim_stab(nzol))
         else
            psim_stable = psim_stable_full(zolf)
@@ -1244,7 +1367,7 @@ CONTAINS
       real    :: rzol
         nzol = int(zolf*100.)
         rzol = zolf*100. - nzol
-        if(nzol+1 .le. 1000)then
+        if(nzol+1 .lt. 1000)then
            psih_stable = psih_stab(nzol) + rzol*(psih_stab(nzol+1)-psih_stab(nzol))
         else
            psih_stable = psih_stable_full(zolf)
@@ -1257,7 +1380,7 @@ CONTAINS
       real    :: rzol
         nzol = int(-zolf*100.)
         rzol = -zolf*100. - nzol
-        if(nzol+1 .le. 1000)then
+        if(nzol+1 .lt. 1000)then
            psim_unstable = psim_unstab(nzol) + rzol*(psim_unstab(nzol+1)-psim_unstab(nzol))
         else
            psim_unstable = psim_unstable_full(zolf)
@@ -1270,7 +1393,7 @@ CONTAINS
       real    :: rzol
         nzol = int(-zolf*100.)
         rzol = -zolf*100. - nzol
-        if(nzol+1 .le. 1000)then
+        if(nzol+1 .lt. 1000)then
            psih_unstable = psih_unstab(nzol) + rzol*(psih_unstab(nzol+1)-psih_unstab(nzol))
         else
            psih_unstable = psih_unstable_full(zolf)
@@ -1278,20 +1401,22 @@ CONTAINS
       return
       end function
 
-     function depth_dependent_z0(water_depth,z0,UST)
-     real :: depth_b
-     real :: effective_depth
-        IF ( water_depth .lt. 10.0 ) THEN
-          effective_depth = 10.0 
-        ELSEIF ( water_depth .gt. 100.0 ) THEN
-          effective_depth = 100.0
-        ENDIF
-              
-        depth_b = 1 / 30.0 * log (1260.0 / effective_depth)
-        depth_dependent_z0 = exp((2.7 * ust - 1.8 / depth_b) / (ust + 0.17 / depth_b) )
-        depth_dependent_z0 = MIN(z0,0.1)     
-    return
-    end function
+      function depth_dependent_z0(water_depth,z0,UST)
+      real :: depth_b
+      real :: effective_depth
+         IF ( water_depth .lt. 10.0 ) THEN
+           effective_depth = 10.0
+         ELSEIF ( water_depth .gt. 100.0 ) THEN
+           effective_depth = 100.0
+         ELSE
+           effective_depth = water_depth
+         ENDIF
+ 
+         depth_b = 1 / 30.0 * log (1260.0 / effective_depth)
+         depth_dependent_z0 = exp((2.7 * ust - 1.8 / depth_b) / (ust + 0.17 / depth_b) )
+         depth_dependent_z0 = MIN(depth_dependent_z0,0.1)
+     return
+     end function
 !-------------------------------------------------------------------          
 
 END MODULE module_sf_sfclayrev

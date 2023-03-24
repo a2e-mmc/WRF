@@ -294,6 +294,14 @@ SUBROUTINE med_before_solve_io ( grid , config_flags )
                                         grid%j_start(ij), grid%j_end(ij),        &
                                         kps    , kpe                     )
 
+                CALL set_physical_bc3d( grid%q_sq_prog_2 , 'p', config_flags,  &
+                                        ids, ide, jds, jde, kds, kde,            &
+                                        ims, ime, jms, jme, kms, kme,            &
+                                        ips, ipe, jps, jpe, kps, kpe,            &
+                                        grid%i_start(ij), grid%i_end(ij),        &
+                                        grid%j_start(ij), grid%j_end(ij),        &
+                                        kps    , kpe                     )
+
              ENDDO
           ENDIF
        ELSE
@@ -2475,6 +2483,7 @@ END SUBROUTINE open_hist_w
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #if ( WRF_CHEM == 1 )
+#if (DA_CORE != 1)
 
 SUBROUTINE med_read_wrf_chem_input ( grid , config_flags )
   ! Driver layer
@@ -3149,6 +3158,7 @@ SUBROUTINE med_read_wrf_chem_emissopt3 ( grid , config_flags )
    CALL wrf_debug (00 , 'mediation_integrate: med_read_wrf_chem_fireemissions: exit' )
 
 END SUBROUTINE med_read_wrf_chem_emissopt3
+#endif
 #endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

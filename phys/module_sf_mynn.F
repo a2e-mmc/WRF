@@ -59,6 +59,7 @@ MODULE module_sf_mynn
 !For WRF
   USE module_model_constants, only: &
        &p1000mb, ep_2
+  USE module_sf_sfclayrev, only:depth_dependent_z0,shalwater_init
 
 !-------------------------------------------------------------------
   IMPLICIT NONE
@@ -89,9 +90,23 @@ MODULE module_sf_mynn
 CONTAINS
 
 !-------------------------------------------------------------------
-  SUBROUTINE mynn_sf_init_driver(allowed_to_read)
+  SUBROUTINE mynn_sf_init_driver(allowed_to_read,                    &
+                                 ims,ime,jms,jme,                    &
+                                 its,ite,jts,jte,                    &
+                                 bathymetry_flag, shalwater_z0,   &
+                                 shalwater_depth, water_depth,       &
+                                 xland,LakeModel,lake_depth,lakemask )
 
     LOGICAL, INTENT(in) :: allowed_to_read
+    INTEGER, INTENT(IN)      ::   ims,ime,jms,jme,its,ite,jts,jte
+    INTEGER, INTENT(IN)      ::   shalwater_z0
+    REAL,    INTENT(IN)      ::   shalwater_depth
+    INTEGER, INTENT(IN)      ::   bathymetry_flag
+    REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)    ::  water_depth
+    REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(IN   )    ::  xland
+    INTEGER         ::     LakeModel
+    REAL,    DIMENSION( ims:ime, jms:jme ), INTENT(IN   )    ::  lake_depth
+    REAL,    DIMENSION( ims:ime, jms:jme )                   ::  lakemask
 
     !Fill the PSIM and PSIH tables. This code was leveraged from
     !module_sf_sfclayrev.F, leveraging the work from Pedro Jimenez.
@@ -100,6 +115,14 @@ CONTAINS
     !from Cheng and Brutsaert (2005) for stable conditions.
 
      CALL psi_init
+
+     IF ( shalwater_z0 .EQ. 1 ) THEN
+        CALL shalwater_init(ims,ime,jms,jme,            &
+                  its,ite,jts,jte,                      &
+                  bathymetry_flag, shalwater_z0,     &
+                  shalwater_depth, water_depth,         &
+                  xland,LakeModel,lake_depth,lakemask   )
+     END IF
 
   END SUBROUTINE mynn_sf_init_driver
 
@@ -117,7 +140,8 @@ CONTAINS
               ids,ide, jds,jde, kds,kde,                    &
               ims,ime, jms,jme, kms,kme,                    &
               its,ite, jts,jte, kts,kte,                    &
-              ustm,ck,cka,cd,cda,isftcflx,iz0tlnd           )
+              ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
+              shalwater_z0,shalwater_depth,water_depth   )
 !-------------------------------------------------------------------
       IMPLICIT NONE
 !-------------------------------------------------------------------
@@ -278,6 +302,9 @@ CONTAINS
 
 !ADDITIONAL OUTPUT
       REAL,     DIMENSION( ims:ime, jms:jme )    ::   wstar,qstar
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     shalwater_z0  
+      REAL,     OPTIONAL,  INTENT(IN )   ::     shalwater_depth
+      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN)  :: water_depth  
 !===================================
 ! 1D LOCAL ARRAYS
 !===================================
@@ -355,7 +382,8 @@ CONTAINS
                 its,ite, jts,jte, kts,kte                          &
                 ,isftcflx,iz0tlnd,                                 &
                 USTM(ims,j),CK(ims,j),CKA(ims,j),                  &
-                CD(ims,j),CDA(ims,j)                               &
+                CD(ims,j),CDA(ims,j),                              &
+                shalwater_z0,water_depth(ims,j)                 &
                                                                    )
 
       ENDDO
@@ -382,7 +410,8 @@ CONTAINS
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte                     &
                      ,isftcflx, iz0tlnd,                           &
-                     ustm,ck,cka,cd,cda                            &
+                     ustm,ck,cka,cd,cda,                           &
+                     shalwater_z0,water_depth                   &
                      )
 
 !-------------------------------------------------------------------
@@ -452,6 +481,8 @@ CONTAINS
 !JOE-additinal output
       REAL,     DIMENSION( ims:ime ) ::                wstar,qstar
 !JOE-end
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     shalwater_z0  
+      REAL, OPTIONAL, DIMENSION( ims:ime ), INTENT(IN)  :: water_depth  
 !----------------------------------------------------------------
 ! LOCAL VARS
 !----------------------------------------------------------------
@@ -624,37 +655,41 @@ CONTAINS
        !--------------------------------------
        ! CALCULATE z0 (znt)
        !--------------------------------------
-       IF ( PRESENT(ISFTCFLX) ) THEN
-          IF ( ISFTCFLX .EQ. 0 ) THEN
-             IF (COARE_OPT .EQ. 3.0) THEN
-                !COARE 3.0 (MISLEADING SUBROUTINE NAME)
-                CALL charnock_1955(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
-             ELSE
-                !COARE 3.5
-                CALL edson_etal_2013(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
-             ENDIF
-          ELSEIF ( ISFTCFLX .EQ. 1 .OR. ISFTCFLX .EQ. 2 ) THEN
-             CALL davis_etal_2008(ZNT(i),UST(i))
-          ELSEIF ( ISFTCFLX .EQ. 3 ) THEN
-             CALL Taylor_Yelland_2001(ZNT(i),UST(i),WSPD(i))
-          ELSEIF ( ISFTCFLX .EQ. 4 ) THEN
-             IF (COARE_OPT .EQ. 3.0) THEN
-                !COARE 3.0 (MISLEADING SUBROUTINE NAME)
-                CALL charnock_1955(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
-             ELSE
-                !COARE 3.5
-                CALL edson_etal_2013(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
-             ENDIF
-          ENDIF
+       IF ( shalwater_z0 .eq. 1 ) THEN
+          ZNT(I) = depth_dependent_z0(water_depth(I),ZNT(I),UST(I))
        ELSE
-          !DEFAULT TO COARE 3.0/3.5
-          IF (COARE_OPT .EQ. 3.0) THEN
-             !COARE 3.0
-             CALL charnock_1955(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
-          ELSE
-             !COARE 3.5
-             CALL edson_etal_2013(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
-          ENDIF
+           IF ( PRESENT(ISFTCFLX) ) THEN
+              IF ( ISFTCFLX .EQ. 0 ) THEN
+                 IF (COARE_OPT .EQ. 3.0) THEN
+                    !COARE 3.0 (MISLEADING SUBROUTINE NAME)
+                    CALL charnock_1955(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
+                 ELSE
+                    !COARE 3.5
+                    CALL edson_etal_2013(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
+                 ENDIF
+              ELSEIF ( ISFTCFLX .EQ. 1 .OR. ISFTCFLX .EQ. 2 ) THEN
+                 CALL davis_etal_2008(ZNT(i),UST(i))
+              ELSEIF ( ISFTCFLX .EQ. 3 ) THEN
+                 CALL Taylor_Yelland_2001(ZNT(i),UST(i),WSPD(i))
+              ELSEIF ( ISFTCFLX .EQ. 4 ) THEN
+                 IF (COARE_OPT .EQ. 3.0) THEN
+                    !COARE 3.0 (MISLEADING SUBROUTINE NAME)
+                    CALL charnock_1955(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
+                 ELSE
+                    !COARE 3.5
+                    CALL edson_etal_2013(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
+                 ENDIF
+              ENDIF
+           ELSE
+              !DEFAULT TO COARE 3.0/3.5
+              IF (COARE_OPT .EQ. 3.0) THEN
+                 !COARE 3.0
+                 CALL charnock_1955(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
+              ELSE
+                 !COARE 3.5
+                 CALL edson_etal_2013(ZNT(i),UST(i),WSPD(i),visc,ZA(I))
+              ENDIF
+           ENDIF
        ENDIF
 
        ! add stochastic perturbaction of ZNT

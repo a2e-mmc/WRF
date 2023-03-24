@@ -5,7 +5,6 @@
 !----------------------------------------------------------------------
 !
       USE MODULE_MODEL_CONSTANTS
-      USE module_sf_sfclayrev, ONLY : depth_dependent_z0
 #ifdef DM_PARALLEL
       USE MODULE_DM, ONLY : WRF_DM_MAXVAL
 #endif
@@ -75,7 +74,6 @@ CONTAINS
      &                 ,QGH,CPM,CT                                     &
      &                 ,U10,V10,T02,TH02,TSHLTR,TH10,Q02,QSHLTR,Q10,PSHLTR          &
      &                 ,P1000mb,U10E,V10E                              &
-     &                 ,use_bathymetry,water_depth                     &
      &                 ,IDS,IDE,JDS,JDE,KDS,KDE                        &
      &                 ,IMS,IME,JMS,JME,KMS,KME                        &
      &                 ,ITS,ITE,JTS,JTE,KTS,KTE)
@@ -124,8 +122,6 @@ CONTAINS
 !
       REAL,INTENT(IN) :: P1000mb
 
-      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
-      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ) , INTENT(IN ) :: water_depth ! PSH
 !----------------------------------------------------------------------
 !***
 !***  LOCAL VARIABLES
@@ -322,7 +318,6 @@ CONTAINS
      &               ,U10(I,J),V10(I,J),TSHLTR(I,J),TH10(I,J)          &
      &               ,QSHLTR(I,J),Q10(I,J),PSHLTR(I,J)                 &
      &               ,U10E(I,J),V10E(I,J)                              &
-     &               ,USE_BATHYMETRY,WATER_DEPTH(I,J)                  & ! PSH
      &               ,IDS,IDE,JDS,JDE,KDS,KDE                          &
      &               ,IMS,IME,JMS,JME,KMS,KME                          &
      &               ,ITS,ITE,JTS,JTE,KTS,KTE,i,j,ZHK(LMH+1))
@@ -373,7 +368,6 @@ CONTAINS
      &                 ,ZSL,PLOW                                       &
      &                 ,U10,V10,TH02,TH10,Q02,Q10,PSHLTR               &
      &                 ,U10E,V10E                                      &
-     &                 ,use_bathymetry,water_depth                     &
      &                 ,IDS,IDE,JDS,JDE,KDS,KDE                        &
      &                 ,IMS,IME,JMS,JME,KMS,KME                        &
      &                 ,ITS,ITE,JTS,JTE,KTS,KTE,i,j,ZSFC)
@@ -404,8 +398,6 @@ CONTAINS
 !
       REAL,INTENT(INOUT) :: AKHS,AKMS,QZ0,THZ0,USTAR,UZ0,VZ0,Z0,QS
 
-      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
-      REAL, OPTIONAL,  INTENT(IN ) :: water_depth ! PSH
 !----------------------------------------------------------------------
 !***
 !***  LOCAL VARIABLES
@@ -429,7 +421,6 @@ CONTAINS
      &       ,XLT104,XLU10,XLU104,XU10,XU104,ZT02,ZT10,ZTAT02,ZTAT10   &
      &       ,ZTAU,ZTAU10,ZU10,ZUUZ
 
-      REAL    :: depth,depth_b ! PSH
 
 !----------------------------------------------------------------------
 !**********************************************************************
@@ -459,11 +450,7 @@ CONTAINS
         DO ITR=1,ITRMX
 !----------------------------------------------------------------------
 
-          IF ( use_bathymetry .eq. 1 ) THEN
-            Z0=depth_dependent_z0(water_depth,Z0,USTAR)
-          ELSE
             Z0=MAX(USTFC*USTAR*USTAR,1.59E-5)
-          ENDIF
 !
 !***  VISCOUS SUBLAYER, JANJIC MWR 1994
 !
