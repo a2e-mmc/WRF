@@ -25,7 +25,7 @@ CONTAINS
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
                      ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
-                     shalwater_z0,water_depth,shalwater_depth,  & 
+                     shalwater_z0,water_depth,shalwater_depth,     & 
                      scm_force_flux                                )
 !-------------------------------------------------------------------
       IMPLICIT NONE
@@ -198,9 +198,9 @@ CONTAINS
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX, IZ0TLND
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     SCM_FORCE_FLUX
 
-      INTEGER,  OPTIONAL,  INTENT(IN )   ::     shalwater_z0 
-      REAL,     OPTIONAL,  INTENT(IN )   ::     shalwater_depth 
-      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN)  :: water_depth 
+      INTEGER,  INTENT(IN )   ::     shalwater_z0 
+      REAL,     INTENT(IN )   ::     shalwater_depth 
+      REAL,     DIMENSION( ims:ime, jms:jme ), INTENT(IN)  :: water_depth 
 ! LOCAL VARS
 
       REAL,     DIMENSION( its:ite ) ::                       U1D, &
@@ -243,7 +243,7 @@ CONTAINS
                 GZ1OZ0(ims,j),WSPD(ims,j),BR(ims,j),ISFFLX,DX,     &
                 SVP1,SVP2,SVP3,SVPT0,EP1,EP2,KARMAN,EOMEG,STBOLT,  &
                 P1000mb,                                           &
-                shalwater_z0,water_depth(ims,j),shalwater_depth,& 
+                shalwater_z0,water_depth(ims,j),shalwater_depth,   & 
                 ids,ide, jds,jde, kds,kde,                         &
                 ims,ime, jms,jme, kms,kme,                         &
                 its,ite, jts,jte, kts,kte                          &
@@ -268,7 +268,7 @@ CONTAINS
                      SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                      KARMAN,EOMEG,STBOLT,                          &
                      P1000mb,                                      &
-                     shalwater_z0,water_depth,shalwater_depth,  & 
+                     shalwater_z0,water_depth,shalwater_depth,     & 
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
@@ -333,9 +333,9 @@ CONTAINS
 
       REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
 
-      INTEGER,  OPTIONAL,  INTENT(IN )   ::     shalwater_z0 
-      REAL,     OPTIONAL,  INTENT(IN )   ::     shalwater_depth 
-      REAL, OPTIONAL, DIMENSION( ims:ime ), INTENT(IN)  :: water_depth 
+      INTEGER,  INTENT(IN )   ::     shalwater_z0 
+      REAL,     INTENT(IN )   ::     shalwater_depth 
+      REAL,     DIMENSION( ims:ime ), INTENT(IN)  :: water_depth 
 ! MODULE-LOCAL VARIABLES, DEFINED IN SUBROUTINE SFCLAY
       REAL,     DIMENSION( its:ite ),  INTENT(IN   )   ::  dz8w1d
 
@@ -1161,7 +1161,7 @@ CONTAINS
 !====================================================================
    SUBROUTINE sfclayrevinit(ims,ime,jms,jme,                    &
                             its,ite,jts,jte,                    &
-                            bathymetry_flag, shalwater_z0,   &
+                            bathymetry_flag, shalwater_z0,      &
                             shalwater_depth, water_depth,       &
                             xland,LakeModel,lake_depth,lakemask )
 
@@ -1193,7 +1193,7 @@ CONTAINS
     IF ( shalwater_z0 .EQ. 1 ) THEN
        CALL shalwater_init(ims,ime,jms,jme,            &
                  its,ite,jts,jte,                      &
-                 bathymetry_flag, shalwater_z0,     &
+                 bathymetry_flag, shalwater_z0,        &
                  shalwater_depth, water_depth,         &
                  xland,LakeModel,lake_depth,lakemask   )
     END IF
@@ -1202,7 +1202,7 @@ CONTAINS
 
    SUBROUTINE shalwater_init(ims,ime,jms,jme,                    &
                              its,ite,jts,jte,                    &
-                             bathymetry_flag, shalwater_z0,   &
+                             bathymetry_flag, shalwater_z0,      &
                              shalwater_depth, water_depth,       &
                              xland,LakeModel,lake_depth,lakemask )
 
