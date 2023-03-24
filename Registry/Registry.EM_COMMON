@@ -164,8 +164,6 @@ state   real    rv_tend_curv    ikj     dyn_em          1               Y       
 state   real    rv_tend_hdiff   ikj     dyn_em          1               Y               irh "RV_TEND_HDIFF" "v horizontal diffusion tendency" ""
 state   real    rv_tend_phys    ikj     dyn_em          1               Y               irh "RV_TEND_PHYS"      "total v physics tendency" ""
 state   real    t_tend_adv     ikj     dyn_em          1               -               irh "T_TEND_ADV"       "t-advection tendency" ""
-state    real   bathymetry     ij       dyn_em      1        -     i1  "bathymetry" "Bathymetry and topography" "m"
-state    integer  BATHYMETRY_FLAG   -     misc        1         -     i0rh      "BATHYMETRY_FLAG"   "Flag for bathymetry in the global attributes for metgrid data"
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 #                                               
