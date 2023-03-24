@@ -19,7 +19,6 @@ include registry.ssib
 include registry.noahmp
 include registry.sbm
 include registry.polrad
-include registry.diags
 include registry.afwa
 include registry.rasm_diag
 include registry.elec
@@ -36,3 +35,5 @@ include registry.column_out
 include registry.tsout
 include registry.windturb
 include registry.add_synth_turb_mmc
+include registry.diags
+include registry.CMAQ
