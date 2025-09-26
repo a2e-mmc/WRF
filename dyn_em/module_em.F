@@ -719,12 +719,6 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                   ids, ide, jds, jde, kds, kde,   &
                                   ims, ime, jms, jme, kms, kme,   &
                                   its, ite, jts, jte, kts, kte )
-
-     ru_tend_old = ru_tend                              !!NM: added line record current ru_tenden
-     rv_tend_old = rv_tend                              !!NM: added line record current rv_tenden
-
-     ru_tend_pgf = ru_tend - ru_tend_old               !added line ru pgf tendency
-     rv_tend_pgf = rv_tend - rv_tend_old               !added line rv pgf tendency
 					 
      IF (non_hydrostatic) THEN
       
@@ -746,6 +740,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
      
    ENDIF  ! IEVA
 
+   ru_tend_old = ru_tend
+   rv_tend_old = rv_tend
+
    CALL horizontal_pressure_gradient( ru_tend,rv_tend,                 &
                                        ph,alt,p,pb,al,php,cqu,cqv,     &
                                        muu,muv,mu,c1h,c2h,fnm,fnp,rdnw,&
@@ -757,6 +754,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                        ids, ide, jds, jde, kds, kde,   &
                                        ims, ime, jms, jme, kms, kme,   &
                                        its, ite, jts, jte, kts, kte   )
+
+   ru_tend_pgf = ru_tend - ru_tend_old               !added line ru pgf tendency
+   rv_tend_pgf = rv_tend - rv_tend_old               !added line rv pgf tendency
 
    IF (non_hydrostatic) THEN
         CALL pg_buoy_w( rw_tend, p, cqw, mu, mub,       &
